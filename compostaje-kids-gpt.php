@@ -8,9 +8,9 @@ Author: Amadeo
 
 if (!defined('ABSPATH')) exit;
 
-// Register a restricted role for chatbot users
+// On activation create log table
 register_activation_hook(__FILE__, function(){
-    add_role('ck_gpt_user', 'Compostaje Kids GPT', ['read' => true]);
+
     global $wpdb;
     $table = $wpdb->prefix . 'ck_gpt_logs';
     $charset = $wpdb->get_charset_collate();
@@ -27,15 +27,6 @@ register_activation_hook(__FILE__, function(){
     dbDelta($sql);
 });
 
-// Prevent chatbot users from accessing the dashboard
-add_action('admin_init', function(){
-    if (wp_doing_ajax()) return;
-    $user = wp_get_current_user();
-    if (in_array('ck_gpt_user', (array)$user->roles)) {
-        wp_safe_redirect(home_url());
-        exit;
-    }
-});
 
 // Detect pages where the shortcode is used
 function ck_gpt_has_shortcode_page(){
@@ -50,17 +41,11 @@ function ck_gpt_has_shortcode_page(){
 add_action('wp_enqueue_scripts', function(){
     if (!ck_gpt_has_shortcode_page()) return;
 
-    $gsi_src = 'https://accounts.google.com/gsi/client';
+
     global $wp_scripts, $wp_styles;
 
     if ($wp_scripts){
         foreach ($wp_scripts->queue as $handle){
-            $src = isset($wp_scripts->registered[$handle]->src) ? $wp_scripts->registered[$handle]->src : '';
-            if (strpos($src, $gsi_src) !== false){
-                wp_script_add_data($handle, 'async', true);
-                wp_script_add_data($handle, 'defer', true);
-                continue;
-            }
             wp_dequeue_script($handle);
         }
     }
@@ -71,11 +56,6 @@ add_action('wp_enqueue_scripts', function(){
         }
     }
 
-    if (!wp_script_is('google-gsi', 'enqueued') && !wp_script_is('ck-gsi', 'enqueued')){
-        wp_enqueue_script('ck-gsi', $gsi_src, [], null, false);
-        wp_script_add_data('ck-gsi', 'async', true);
-        wp_script_add_data('ck-gsi', 'defer', true);
-    }
 
     if (function_exists('googlesitekit_enqueue_gtag')) {
         googlesitekit_enqueue_gtag();
@@ -96,8 +76,6 @@ add_action('admin_menu', function() {
 
 add_action('admin_init', function() {
     register_setting('ck_gpt_options', 'ck_gpt_api_key');
-    register_setting('ck_gpt_options', 'ck_gpt_google_client_id');
-    register_setting('ck_gpt_options', 'ck_gpt_google_client_secret');
     register_setting('ck_gpt_options', 'ck_gpt_logo');
     register_setting('ck_gpt_options', 'ck_gpt_model');
     register_setting('ck_gpt_options', 'ck_gpt_theme'); // light | dark | auto
@@ -105,8 +83,6 @@ add_action('admin_init', function() {
 
 function ck_gpt_settings_page() {
     $api     = esc_attr(get_option('ck_gpt_api_key'));
-    $client  = esc_attr(get_option('ck_gpt_google_client_id'));
-    $secret  = esc_attr(get_option('ck_gpt_google_client_secret'));
     $logo    = esc_attr(get_option('ck_gpt_logo'));
     $model   = esc_attr(get_option('ck_gpt_model', 'gpt-4o-mini'));
     $theme   = esc_attr(get_option('ck_gpt_theme', 'light')); ?>
@@ -118,14 +94,6 @@ function ck_gpt_settings_page() {
                 <tr>
                     <th scope="row">API Key OpenAI</th>
                     <td><input type="password" name="ck_gpt_api_key" value="<?php echo $api; ?>" style="width:420px;" placeholder="sk-..."></td>
-                </tr>
-                <tr>
-                    <th scope="row">Google Client ID</th>
-                    <td><input type="text" name="ck_gpt_google_client_id" value="<?php echo $client; ?>" style="width:420px;" placeholder="your-client-id"></td>
-                </tr>
-                <tr>
-                    <th scope="row">Google Client Secret</th>
-                    <td><input type="password" name="ck_gpt_google_client_secret" value="<?php echo $secret; ?>" style="width:420px;" placeholder="your-client-secret"></td>
                 </tr>
                 <tr>
                     <th scope="row">Logo (URL)</th>
@@ -211,14 +179,10 @@ add_shortcode('compostaje_gpt', function() {
     ob_start();
     $logo   = esc_attr(get_option('ck_gpt_logo'));
     $ajax   = esc_js(admin_url('admin-ajax.php?action=ck_gpt_chat'));
-    $glogin = esc_js(admin_url('admin-ajax.php?action=ck_gpt_google_login'));
-    $client = esc_attr(get_option('ck_gpt_google_client_id'));
     $theme  = esc_attr(get_option('ck_gpt_theme','light')); ?>
 <div id="ck-gpt-mount"
      data-logo="<?php echo $logo; ?>"
      data-ajax="<?php echo $ajax; ?>"
-     data-glogin="<?php echo $glogin; ?>"
-     data-client="<?php echo $client; ?>"
      data-theme="<?php echo $theme ? $theme : 'light'; ?>"
      style="display:block;contain:content;position:relative;z-index:1;"></div>
 
@@ -235,103 +199,8 @@ add_shortcode('compostaje_gpt', function() {
   new MutationObserver(clearThirdParty).observe(document.documentElement,{childList:true,subtree:true});
 
   const ajaxUrl   = mount.getAttribute('data-ajax');
-  const googleUrl = mount.getAttribute('data-glogin');
-  const clientId  = mount.getAttribute('data-client');
   const logoUrl   = mount.getAttribute('data-logo') || '';
   const themeOpt  = (mount.getAttribute('data-theme') || 'light').toLowerCase();
-  const authed    = localStorage.getItem('ck-gpt-auth') === '1';
-
-  function handleCredentialResponse(res){
-    const terms = document.querySelector('#ck-gpt-terms');
-    if(!terms || !terms.checked){
-      alert('Debes aceptar los términos');
-      return;
-    }
-    if(!res || !res.credential || !googleUrl) return;
-    const form = new FormData();
-    form.append('id_token', res.credential);
-    fetch(googleUrl, {method:'POST', body: form})
-      .then(r => r.json())
-      .then(data => {
-        if(data && data.success){
-          localStorage.setItem('ck-gpt-auth','1');
-          location.reload();
-        } else {
-          alert((data && data.error) ? data.error : 'Error al iniciar sesión');
-        }
-      })
-      .catch(() => alert('Error de conexión'));
-  }
-
-  function renderRegister(){
-    const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:url(https://consultoriainformatica.net/wp-content/uploads/2025/08/Chatbot-en-el-Jardin-Compostero.jpg) center/cover no-repeat;display:flex;flex-direction:column;font-family:\'Poppins\',sans-serif;';
-    document.body.appendChild(overlay);
-
-    const header = document.createElement('div');
-    header.style.cssText = 'position:relative;background:#005AE2;color:#fff;padding:24px 16px;text-align:center;';
-    header.innerHTML = `
-      <button id="ck-gpt-close" style="position:absolute;top:16px;right:16px;background:none;border:none;color:#fff;font-size:24px;line-height:1;cursor:pointer;">×</button>
-      ${logoUrl ? `<img src="${logoUrl}" alt="logo" style="width:64px;height:64px;border-radius:8px;object-fit:cover;display:block;margin:0 auto 8px;">` : ''}
-      <span style="font-size:20px;font-weight:600;display:block;">Empieza gratis a chatear con nuestro experto en compostaje</span>
-    `;
-    overlay.appendChild(header);
-
-    const mid = document.createElement('div');
-    mid.style.cssText = 'flex:1;padding:24px;display:flex;justify-content:center;align-items:center;';
-    mid.innerHTML = `<div style="width:100%;max-width:400px;display:flex;flex-direction:column;gap:16px;font-family:\'Poppins\',sans-serif;color:#0f172a;">
-
-        <label style="font-size:16px;color:#475569;line-height:1.4;max-width:400px;box-sizing:border-box;display:flex;align-items:center;gap:8px;"><input type="checkbox" id="ck-gpt-terms" required> Acepto las condiciones de uso para participar en este chat educativo del CEBAS-CSIC.</label>
-        <div id="ck-gpt-google" style="width:100%;max-width:400px;box-sizing:border-box;"></div>
-      </div>`;
-    overlay.appendChild(mid);
-
-    const style = document.createElement('style');
-    style.textContent = `#ck-gpt-terms{transform:scale(1.5);accent-color:#2563eb;filter:drop-shadow(0 0 2px #2563eb);animation:ckTermsPulse 1s infinite alternate;}
-    @media(max-width:768px){#ck-gpt-terms{transform:scale(2);}}
-    @keyframes ckTermsPulse{from{filter:drop-shadow(0 0 2px #2563eb);}to{filter:drop-shadow(0 0 6px #2563eb);}}`;
-    overlay.appendChild(style);
-
-    const closeBtn = overlay.querySelector('#ck-gpt-close');
-    if (closeBtn) closeBtn.addEventListener('click', () => { window.location.href = '/'; });
-
-    const terms = overlay.querySelector('#ck-gpt-terms');
-    const gCont = overlay.querySelector('#ck-gpt-google');
-
-    function toggleAuth(){
-      const enabled = terms && terms.checked;
-      if(gCont){
-        gCont.style.opacity = enabled ? '1' : '.5';
-        gCont.style.pointerEvents = enabled ? 'auto' : 'none';
-      }
-      if(terms && enabled){
-        terms.style.animation = 'none';
-      }
-    }
-    toggleAuth();
-    if(terms){
-      terms.addEventListener('change', toggleAuth);
-    }
-
-    const waitG = setInterval(function(){
-      if(window.google && window.google.accounts && clientId){
-        clearInterval(waitG);
-        google.accounts.id.initialize({client_id: clientId, callback: handleCredentialResponse});
-        const gWidth = gCont ? gCont.clientWidth : 320;
-        google.accounts.id.renderButton(gCont, {
-          theme: themeOpt === 'dark' ? 'filled_black' : 'outline',
-          width: gWidth,
-        });
-        toggleAuth();
-      }
-    }, 100);
-  }
-
-  if(!authed){
-    renderRegister();
-    return;
-  }
-
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:url(https://consultoriainformatica.net/wp-content/uploads/2025/08/Chatbot-en-el-Jardin-Compostero.jpg) center/cover no-repeat;display:flex;justify-content:center;align-items:center;';
   document.body.innerHTML = '';
@@ -366,9 +235,8 @@ add_shortcode('compostaje_gpt', function() {
     --ai:#fff9c4; --ai-b:#ffe58f; --us:#b3e5fc; --us-b:#81d4fa;
     --chip:#e1f5fe; --chip-b:#b3e5fc; --chip-text:#0f172a;
   }
-  .wrap{ position:absolute; inset:0; display:flex; flex-direction:column; width:100%; height:100%; margin:0; border:none; border-radius:0; overflow:hidden; background:#fff; box-shadow:none; }
+  .wrap{ position:absolute; inset:0; display:flex; flex-direction:column; width:100%; height:100%; margin:0; border:none; border-radius:0; overflow:hidden; background:#fff; box-shadow:none; opacity:0.8; }
   .header{ position:relative; text-align:center; padding:22px 18px; background:var(--mut); border-bottom:1px solid var(--bd); }
-  .logout{ position:absolute; top:12px; right:12px; background:none; border:none; color:inherit; cursor:pointer; font-size:14px; }
   .header img{ max-height:56px; margin:0 auto 8px; display:block; }
   .title{ margin:4px 0 2px; font-size: clamp(18px,2.2vw,22px); font-weight:800; }
   .desc{ margin:0; font-size: clamp(12px,1.6vw,14px); color:#4b5563; }
@@ -423,7 +291,6 @@ add_shortcode('compostaje_gpt', function() {
   const html = `
     <div class="wrap">
       <div class="header">
-        <button class="logout" id="ck-logout">Cerrar sesión</button>
         ${logoUrl ? `<img src="${logoUrl}" alt="Compostaje CEBAS para Niños">` : ''}
         <div class="title">Compostaje CEBAS Kids</div>
         <p class="desc">Un proyecto del CEBAS-CSIC para aprender a compostar jugando.</p>
@@ -459,12 +326,6 @@ add_shortcode('compostaje_gpt', function() {
   const fieldEl = root.getElementById('field');
   const sendBtn = root.getElementById('send');
   const chips = root.getElementById('chips');
-  const logoutBtn = root.getElementById('ck-logout');
-  if (logoutBtn) logoutBtn.addEventListener('click', () => {
-    localStorage.removeItem('ck-gpt-auth');
-    localStorage.removeItem('ckMessages');
-    location.reload();
-  });
   let sending = false;
 
   // History
@@ -503,7 +364,6 @@ add_shortcode('compostaje_gpt', function() {
       }
     })();
   }
-
 
     function render(role, text, typing=false){
       const row = document.createElement('div');
@@ -578,8 +438,6 @@ add_shortcode('compostaje_gpt', function() {
  * ========================= */
 add_action('wp_ajax_ck_gpt_chat', 'ck_gpt_chat');
 add_action('wp_ajax_nopriv_ck_gpt_chat', 'ck_gpt_chat');
-add_action('wp_ajax_ck_gpt_google_login', 'ck_gpt_google_login');
-add_action('wp_ajax_nopriv_ck_gpt_google_login', 'ck_gpt_google_login');
 
 function ck_gpt_chat() {
     header('Content-Type: application/json; charset=utf-8');
@@ -670,88 +528,6 @@ function ck_gpt_chat() {
     }
 
     echo json_encode(['reply'=>$reply]);
-    wp_die();
-}
-
-function ck_gpt_google_login() {
-    header('Content-Type: application/json; charset=utf-8');
-
-    $token = isset($_POST['id_token']) ? sanitize_text_field($_POST['id_token']) : '';
-    if (!$token) {
-        echo json_encode(['success'=>false,'error'=>'Token faltante']);
-        wp_die();
-    }
-
-    $verify = wp_remote_get('https://oauth2.googleapis.com/tokeninfo?id_token=' . rawurlencode($token));
-    if (is_wp_error($verify)) {
-        echo json_encode(['success'=>false,'error'=>'Error de conexión con Google']);
-        wp_die();
-    }
-
-    $code = wp_remote_retrieve_response_code($verify);
-    $body = json_decode(wp_remote_retrieve_body($verify), true);
-    if ($code !== 200 || !is_array($body) || empty($body['email'])) {
-        echo json_encode(['success'=>false,'error'=>'Token inválido']);
-        wp_die();
-    }
-
-    $email = sanitize_email($body['email']);
-    $name  = sanitize_text_field(isset($body['name']) ? $body['name'] : '');
-    $first = sanitize_text_field(isset($body['given_name']) ? $body['given_name'] : '');
-    $last  = sanitize_text_field(isset($body['family_name']) ? $body['family_name'] : '');
-
-    $user = get_user_by('email', $email);
-    $pass = wp_generate_password(20, true, true);
-
-    if ($user) {
-        $user_id = wp_update_user([
-            'ID'           => $user->ID,
-            'user_pass'    => $pass,
-            'display_name' => $name,
-            'first_name'   => $first,
-            'last_name'    => $last,
-            'role'         => 'ck_gpt_user',
-        ]);
-    } else {
-        $login = sanitize_user(str_replace('@', '_', $email), true);
-        if (empty($login)) {
-            $login = 'user_' . wp_generate_password(8, false, false);
-        }
-        if (username_exists($login)) {
-            $login .= '_' . wp_generate_password(4, false, false);
-        }
-        $user_id = wp_insert_user([
-            'user_login'   => $login,
-            'user_email'   => $email,
-            'user_pass'    => $pass,
-            'display_name' => $name,
-            'first_name'   => $first,
-            'last_name'    => $last,
-            'role'         => 'ck_gpt_user',
-        ]);
-    }
-
-    if (is_wp_error($user_id)) {
-        echo json_encode(['success'=>false,'error'=>$user_id->get_error_message()]);
-        wp_die();
-    }
-
-    $creds = [
-        'user_login' => get_userdata($user_id)->user_login,
-        'user_password' => $pass,
-        'remember' => true,
-    ];
-    $signon = wp_signon($creds, false);
-    if (is_wp_error($signon)) {
-        echo json_encode(['success'=>false,'error'=>$signon->get_error_message()]);
-        wp_die();
-    }
-
-    echo json_encode(['success'=>true,'user'=>[
-        'id' => $user_id,
-        'email' => $email,
-        'name' => $name,
-    ]]);
     wp_die();
 }
 
