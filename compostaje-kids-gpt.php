@@ -197,7 +197,6 @@ add_shortcode('compostaje_gpt', function() {
   const ajaxUrl   = mount.getAttribute('data-ajax');
   const logoUrl   = mount.getAttribute('data-logo') || '';
   const themeOpt  = (mount.getAttribute('data-theme') || 'light').toLowerCase();
-
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:url(https://consultoriainformatica.net/wp-content/uploads/2025/08/Chatbot-en-el-Jardin-Compostero.jpg) center/cover no-repeat;display:flex;justify-content:center;align-items:center;';
   document.body.innerHTML = '';
