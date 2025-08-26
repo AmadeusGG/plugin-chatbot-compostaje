@@ -280,6 +280,7 @@ add_shortcode('compostaje_gpt', function() {
     const mid = document.createElement('div');
     mid.style.cssText = 'flex:1;padding:24px;display:flex;justify-content:center;align-items:center;';
     mid.innerHTML = `<div style="width:100%;max-width:400px;display:flex;flex-direction:column;gap:16px;font-family:\'Poppins\',sans-serif;color:#0f172a;">
+
         <label style="font-size:16px;color:#475569;line-height:1.4;max-width:400px;box-sizing:border-box;display:flex;align-items:center;gap:8px;"><input type="checkbox" id="ck-gpt-terms" required> Acepto las condiciones de uso para participar en este chat educativo del CEBAS-CSIC.</label>
         <div id="ck-gpt-google" style="width:100%;max-width:400px;box-sizing:border-box;"></div>
       </div>`;
@@ -290,8 +291,6 @@ add_shortcode('compostaje_gpt', function() {
     @media(max-width:768px){#ck-gpt-terms{transform:scale(2);}}
     @keyframes ckTermsPulse{from{filter:drop-shadow(0 0 2px #2563eb);}to{filter:drop-shadow(0 0 6px #2563eb);}}`;
     overlay.appendChild(style);
-
-    
 
     const closeBtn = overlay.querySelector('#ck-gpt-close');
     if (closeBtn) closeBtn.addEventListener('click', () => { window.location.href = '/'; });
@@ -505,6 +504,7 @@ add_shortcode('compostaje_gpt', function() {
     })();
   }
 
+
     function render(role, text, typing=false){
       const row = document.createElement('div');
       row.className = 'row ' + (role==='user'?'user':'ai');
@@ -610,6 +610,7 @@ function ck_gpt_chat() {
         . "Si la pregunta no esta relacionada con el compostaje, redirige la conversacion al tema. "
         . "Anima siempre a cuidar el medio ambiente y a pedir ayuda a un adulto cuando sea necesario. "
         . "Basate en la informacion divulgativa del CEBAS (https://www.cebas.csic.es/general_spain/presentacion.html) y no proporciones enlaces ni datos de contacto.";
+
 
     array_unshift($messages, ['role'=>'system','content'=>$system_prompt]);
 
