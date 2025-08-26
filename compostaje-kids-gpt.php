@@ -265,7 +265,7 @@ add_shortcode('compostaje_gpt', function() {
 
   function renderRegister(){
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:#fff;display:flex;flex-direction:column;font-family:\'Poppins\',sans-serif;';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:url(https://consultoriainformatica.net/wp-content/uploads/2025/08/Chatbot-en-el-Jardin-Compostero.jpg) center/cover no-repeat;display:flex;flex-direction:column;font-family:\'Poppins\',sans-serif;';
     document.body.appendChild(overlay);
 
     const header = document.createElement('div');
@@ -280,7 +280,8 @@ add_shortcode('compostaje_gpt', function() {
     const mid = document.createElement('div');
     mid.style.cssText = 'flex:1;padding:24px;display:flex;justify-content:center;align-items:center;';
     mid.innerHTML = `<div style="width:100%;max-width:400px;display:flex;flex-direction:column;gap:16px;font-family:\'Poppins\',sans-serif;color:#0f172a;">
-        <label style="font-size:16px;color:#475569;line-height:1.4;max-width:400px;box-sizing:border-box;display:flex;align-items:center;gap:8px;"><input type="checkbox" id="ck-gpt-terms" required> Acepto los <a href="https://compostajeparaninos.es/terminos-de-servicio-agente-ia-gratis/" target="_blank">Términos de Servicio</a> y la <a href="https://compostajeparaninos.es/politica-privacidad/" target="_blank">Política de Privacidad</a></label>
+
+        <label style="font-size:16px;color:#475569;line-height:1.4;max-width:400px;box-sizing:border-box;display:flex;align-items:center;gap:8px;"><input type="checkbox" id="ck-gpt-terms" required> Acepto las condiciones de uso para participar en este chat educativo del CEBAS-CSIC.</label>
         <div id="ck-gpt-google" style="width:100%;max-width:400px;box-sizing:border-box;"></div>
       </div>`;
     overlay.appendChild(mid);
@@ -290,11 +291,6 @@ add_shortcode('compostaje_gpt', function() {
     @media(max-width:768px){#ck-gpt-terms{transform:scale(2);}}
     @keyframes ckTermsPulse{from{filter:drop-shadow(0 0 2px #2563eb);}to{filter:drop-shadow(0 0 6px #2563eb);}}`;
     overlay.appendChild(style);
-
-    const footer = document.createElement('div');
-    footer.style.cssText = 'text-align:center;font-size:16px;color:#475569;padding:16px;background:#f8fafc;';
-    footer.innerHTML = '<div class="footer-html-inner"><p>© 2025 compostajeparaninos.es</p><p><a href="https://compostajeparaninos.es/politica-de-cookies/" target="_blank" rel="nofollow noopener noreferrer">Política de Cookies</a> |<br><a href="https://compostajeparaninos.es/politica-privacidad/" target="_blank" rel="nofollow noopener noreferrer">Política de Privacidad</a> |<br><a href="https://compostajeparaninos.es/aviso-legal/" target="_blank" rel="nofollow noopener noreferrer">Aviso Legal</a></p></div>';
-    overlay.appendChild(footer);
 
     const closeBtn = overlay.querySelector('#ck-gpt-close');
     if (closeBtn) closeBtn.addEventListener('click', () => { window.location.href = '/'; });
@@ -337,7 +333,7 @@ add_shortcode('compostaje_gpt', function() {
   }
 
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:' + (themeOpt==='dark' ? '#0b0f14' : '#fff') + ';display:flex;justify-content:center;align-items:center;';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:url(https://consultoriainformatica.net/wp-content/uploads/2025/08/Chatbot-en-el-Jardin-Compostero.jpg) center/cover no-repeat;display:flex;justify-content:center;align-items:center;';
   document.body.innerHTML = '';
   document.documentElement.style.height = '100%';
   document.body.style.height = '100%';
@@ -397,15 +393,6 @@ add_shortcode('compostaje_gpt', function() {
   .send[disabled]{ opacity:.6; cursor:not-allowed; }
   .send svg{ width:22px; height:22px; display:block; fill:currentColor; filter: drop-shadow(0 1px 0 rgba(0,0,0,.45)); } /* visible siempre */
   .send svg path{ stroke: rgba(0,0,0,.55); stroke-width: .6px; }
-  .contact-ctas{ margin-top:12px; }
-  .contact-ctas .row{ display:flex; flex-wrap:wrap; gap:8px; margin:0; }
-  .contact-ctas .col{ flex:1 0 100%; }
-  @media(min-width:768px){ .contact-ctas .col{ flex:0 0 calc(33.333% - 8px); } }
-  .cta{ display:block; width:100%; padding:8px 12px; border-radius:8px; text-align:center; color:#fff; text-decoration:none; font-size:clamp(12px,1.8vw,14px); }
-  .cta.call{ background:#2563eb; }
-  .cta.whatsapp{ background:#25D366; }
-  .cta.email{ background:#f97316; }
-  .cta:hover{ filter: brightness(1.08); }
   .typing{ display:inline-flex; align-items:center; gap:4px; }
   .dot{ width:6px; height:6px; border-radius:50%; background:#606770; opacity:.4; animation:blink 1.2s infinite; }
   .dot:nth-child(2){ animation-delay:.2s; } .dot:nth-child(3){ animation-delay:.4s; }
@@ -437,9 +424,9 @@ add_shortcode('compostaje_gpt', function() {
     <div class="wrap">
       <div class="header">
         <button class="logout" id="ck-logout">Cerrar sesión</button>
-        ${logoUrl ? `<img src="${logoUrl}" alt="Compostaje para Ninos">` : ''}
-        <div class="title">Compostaje para Ninos</div>
-        <p class="desc">Asistente divertido que te ensena sobre compostaje y reciclaje.</p>
+        ${logoUrl ? `<img src="${logoUrl}" alt="Compostaje CEBAS para Niños">` : ''}
+        <div class="title">Compostaje CEBAS Kids</div>
+        <p class="desc">Un proyecto del CEBAS-CSIC para aprender a compostar jugando.</p>
       </div>
       <div class="chips" id="chips">
         <button class="chip" data-q="Que puedo poner en mi compostera?">Que puedo poner en mi compostera?</button>
@@ -488,9 +475,9 @@ add_shortcode('compostaje_gpt', function() {
     typingOn();
     setTimeout(function(){
       typingOff();
-      const welcome = 'Hola! Soy tu amigo del compost. Estoy aqui para ensenarte como convertir restos de comida en abono para las plantas. Pregunta lo que quieras sobre compostaje!';
+      const welcome = 'Hola! Soy tu amigo del compost del CEBAS-CSIC. Estoy aqui para ensenarte como convertir restos de comida en abono para las plantas. Pregunta lo que quieras sobre compostaje!';
       history.push({role:'assistant',content:welcome});
-      render('ai', welcome, false, false);
+      render('ai', welcome, false);
       persist();
       scroll();
     },2000);
@@ -517,7 +504,8 @@ add_shortcode('compostaje_gpt', function() {
     })();
   }
 
-    function render(role, text, typing=false, showCtas=true){
+
+    function render(role, text, typing=false){
       const row = document.createElement('div');
       row.className = 'row ' + (role==='user'?'user':'ai');
       const bubble = document.createElement('div');
@@ -532,18 +520,7 @@ add_shortcode('compostaje_gpt', function() {
         const txt = document.createElement('div');
         bubble.appendChild(txt);
         if(role === 'ai'){
-          typeText(txt, text, () => {
-            if(showCtas){
-              const ctas = document.createElement('div');
-              ctas.className = 'contact-ctas';
-              ctas.innerHTML = '<div class="row">'+
-                '<div class="col"><a class="cta call" href="tel:600123456">Llámanos ahora</a></div>'+
-                '<div class="col"><a class="cta whatsapp" href="https://api.whatsapp.com/send?phone=+34600123456&text=Me%20gustar%C3%ADa%20recibir%20m%C3%A1s%20informaci%C3%B3n!" target="_blank" rel="noopener">Háblanos por WhatsApp</a></div>'+
-                '<div class="col"><a class="cta email" href="mailto:hola@compostajeparaninos.es">Escríbenos</a></div>'+
-              '</div>';
-              bubble.appendChild(ctas);
-            }
-          });
+          typeText(txt, text);
         } else {
           txt.textContent = text;
         }
@@ -627,12 +604,13 @@ function ck_gpt_chat() {
         $m['content'] = wp_strip_all_tags((string) $m['content']);
     } unset($m);
 
-    $system_prompt = "Eres \"Compostaje para Ninos\", un asistente amigable experto en compostaje y reciclaje. "
+    $system_prompt = "Eres \"Compostaje para Ninos\", un asistente del CEBAS-CSIC experto en compostaje y reciclaje. "
         . "Tu mision es ensenar a los ninos como transformar los residuos organicos en abono de forma segura y divertida. "
         . "Usa un lenguaje sencillo y ejemplos cotidianos. "
         . "Si la pregunta no esta relacionada con el compostaje, redirige la conversacion al tema. "
         . "Anima siempre a cuidar el medio ambiente y a pedir ayuda a un adulto cuando sea necesario. "
-        . "Datos de contacto: WhatsApp 600 123 456, Email hola@compostajeparaninos.es, Web https://compostajeparaninos.es/.";
+        . "Basate en la informacion divulgativa del CEBAS (https://www.cebas.csic.es/general_spain/presentacion.html) y no proporciones enlaces ni datos de contacto.";
+
 
     array_unshift($messages, ['role'=>'system','content'=>$system_prompt]);
 
