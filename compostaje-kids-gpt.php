@@ -206,9 +206,8 @@ add_shortcode('compostaje_gpt', function() {
   document.body.appendChild(overlay);
 
   const host = document.createElement('div');
-  host.style.cssText = 'position:relative;width:100%;max-width:1000px;height:100%;';
+  host.style.cssText = 'position:relative;width:90vw;height:90vh;max-width:1400px;max-height:900px;';
   if (window.matchMedia('(min-width:600px)').matches) {
-    host.style.maxHeight = '700px';
     host.style.borderRadius = '12px';
     host.style.boxShadow = '0 8px 24px rgba(0,0,0,.12)';
     host.style.overflow = 'hidden';
@@ -232,12 +231,12 @@ add_shortcode('compostaje_gpt', function() {
     --chip:#e1f5fe; --chip-b:#b3e5fc; --chip-text:#0f172a;
   }
   .wrap{ position:absolute; inset:0; display:flex; flex-direction:column; width:100%; height:100%; margin:0; border:none; border-radius:0; overflow:hidden; background:#fff; box-shadow:none; opacity:0.9; }
-  .header{ position:relative; text-align:center; padding:26px 20px; background:var(--mut); border-bottom:1px solid var(--bd); }
+  .header{ position:relative; text-align:center; padding:18px 20px; background:var(--mut); border-bottom:1px solid var(--bd); }
   .header img{ max-height:80px; margin:0 auto 12px; display:block; }
   .title{ margin:4px 0 2px; font-size: clamp(26px,5vw,40px); font-weight:800; }
   .desc{ margin:0; font-size: clamp(18px,3vw,26px); color:#4b5563; }
-  .chips{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; padding:16px; background:var(--mut2); border-bottom:1px solid #eef2f7; overflow-x:auto; scroll-snap-type:x mandatory; }
-  .chip{ scroll-snap-align:start; padding:12px 18px; border-radius:999px; border:1px solid var(--chip-b); background:var(--chip); cursor:pointer; font-size:clamp(18px,2.8vw,24px); color:var(--chip-text); white-space:nowrap; box-shadow:0 2px 0 rgba(0,0,0,.02); transition: background .15s,border-color .15s,transform .08s }
+  .chips{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; padding:12px; background:var(--mut2); border-bottom:1px solid #eef2f7; overflow-x:auto; scroll-snap-type:x mandatory; }
+  .chip{ scroll-snap-align:start; padding:10px 16px; border-radius:999px; border:1px solid var(--chip-b); background:var(--chip); cursor:pointer; font-size:clamp(18px,2.8vw,24px); color:var(--chip-text); white-space:nowrap; box-shadow:0 2px 0 rgba(0,0,0,.02); transition: background .15s,border-color .15s,transform .08s }
   .chip:hover{ background:#eef2ff; border-color:#c7d2fe; }
   .chip:active{ transform: translateY(1px); }
   .chip[disabled]{ opacity:.5; cursor:not-allowed; }
