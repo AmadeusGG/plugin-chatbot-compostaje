@@ -10,7 +10,6 @@ if (!defined('ABSPATH')) exit;
 
 // On activation create log table
 register_activation_hook(__FILE__, function(){
-
     global $wpdb;
     $table = $wpdb->prefix . 'ck_gpt_logs';
     $charset = $wpdb->get_charset_collate();
@@ -27,7 +26,6 @@ register_activation_hook(__FILE__, function(){
     dbDelta($sql);
 });
 
-
 // Detect pages where the shortcode is used
 function ck_gpt_has_shortcode_page(){
     if (!is_singular()) return false;
@@ -40,7 +38,6 @@ function ck_gpt_has_shortcode_page(){
  * ========================= */
 add_action('wp_enqueue_scripts', function(){
     if (!ck_gpt_has_shortcode_page()) return;
-
 
     global $wp_scripts, $wp_styles;
 
@@ -55,7 +52,6 @@ add_action('wp_enqueue_scripts', function(){
             wp_dequeue_style($handle);
         }
     }
-
 
     if (function_exists('googlesitekit_enqueue_gtag')) {
         googlesitekit_enqueue_gtag();
@@ -235,31 +231,31 @@ add_shortcode('compostaje_gpt', function() {
     --ai:#fff9c4; --ai-b:#ffe58f; --us:#b3e5fc; --us-b:#81d4fa;
     --chip:#e1f5fe; --chip-b:#b3e5fc; --chip-text:#0f172a;
   }
-  .wrap{ position:absolute; inset:0; display:flex; flex-direction:column; width:100%; height:100%; margin:0; border:none; border-radius:0; overflow:hidden; background:#fff; box-shadow:none; opacity:0.8; }
-  .header{ position:relative; text-align:center; padding:22px 18px; background:var(--mut); border-bottom:1px solid var(--bd); }
-  .header img{ max-height:56px; margin:0 auto 8px; display:block; }
-  .title{ margin:4px 0 2px; font-size: clamp(18px,2.2vw,22px); font-weight:800; }
-  .desc{ margin:0; font-size: clamp(12px,1.6vw,14px); color:#4b5563; }
-  .chips{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; padding:12px; background:var(--mut2); border-bottom:1px solid #eef2f7; overflow-x:auto; scroll-snap-type:x mandatory; }
-  .chip{ scroll-snap-align:start; padding:9px 12px; border-radius:999px; border:1px solid var(--chip-b); background:var(--chip); cursor:pointer; font-size:clamp(12px,1.8vw,14px); color:var(--chip-text); white-space:nowrap; box-shadow:0 2px 0 rgba(0,0,0,.02); transition: background .15s,border-color .15s,transform .08s }
+  .wrap{ position:absolute; inset:0; display:flex; flex-direction:column; width:100%; height:100%; margin:0; border:none; border-radius:0; overflow:hidden; background:#fff; box-shadow:none; opacity:0.9; }
+  .header{ position:relative; text-align:center; padding:26px 20px; background:var(--mut); border-bottom:1px solid var(--bd); }
+  .header img{ max-height:80px; margin:0 auto 12px; display:block; }
+  .title{ margin:4px 0 2px; font-size: clamp(26px,5vw,40px); font-weight:800; }
+  .desc{ margin:0; font-size: clamp(18px,3vw,26px); color:#4b5563; }
+  .chips{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; padding:16px; background:var(--mut2); border-bottom:1px solid #eef2f7; overflow-x:auto; scroll-snap-type:x mandatory; }
+  .chip{ scroll-snap-align:start; padding:12px 18px; border-radius:999px; border:1px solid var(--chip-b); background:var(--chip); cursor:pointer; font-size:clamp(18px,2.8vw,24px); color:var(--chip-text); white-space:nowrap; box-shadow:0 2px 0 rgba(0,0,0,.02); transition: background .15s,border-color .15s,transform .08s }
   .chip:hover{ background:#eef2ff; border-color:#c7d2fe; }
   .chip:active{ transform: translateY(1px); }
   .chip[disabled]{ opacity:.5; cursor:not-allowed; }
-  .msgs{ flex:1; overflow-y:auto; padding:14px 16px; background:#fff; }
+  .msgs{ flex:1; overflow-y:auto; padding:20px 24px; background:#fff; }
   .row{ display:flex; margin:6px 0; }
   .row.user{ justify-content:flex-end; }
-  .bubble{ max-width:88%; padding:10px 12px; border-radius:16px; line-height:1.55; white-space:pre-wrap; word-wrap:break-word; font-size:clamp(13px,1.8vw,15px); }
+  .bubble{ max-width:90%; padding:16px 18px; border-radius:20px; line-height:1.6; white-space:pre-wrap; word-wrap:break-word; font-size:clamp(18px,2.5vw,24px); }
   .row.user .bubble{ background:var(--us); border:1px solid var(--us-b); }
   .row.ai .bubble{ background:var(--ai); border:1px solid var(--ai-b); }
-  .input{ display:flex; gap:8px; padding:10px 12px; border-top:1px solid var(--bd); background:#ffffff; position:sticky; bottom:0; left:0; right:0; }
-  .field{ flex:1; padding:12px 14px; border:1px solid #d1d5db; border-radius:12px; font-size:16px; outline:none; background:#fff; color:#0f172a; }
+  .input{ display:flex; gap:12px; padding:16px 20px; border-top:1px solid var(--bd); background:#ffffff; position:sticky; bottom:0; left:0; right:0; }
+  .field{ flex:1; padding:16px 20px; border:1px solid #d1d5db; border-radius:16px; font-size:20px; outline:none; background:#fff; color:#0f172a; }
   .field::placeholder{ color:#9aa3ae; }
   .field:focus{ border-color:#93c5fd; box-shadow:0 0 0 3px rgba(59,130,246,.15); }
-  .send{ width:46px; min-width:46px; height:46px; display:flex; align-items:center; justify-content:center; border:none; border-radius:12px;
+  .send{ width:56px; min-width:56px; height:56px; display:flex; align-items:center; justify-content:center; border:none; border-radius:16px;
          background:var(--pri); color:#fff; cursor:pointer; box-shadow: 0 1px 0 rgba(0,0,0,.12), inset 0 0 0 1px rgba(255,255,255,.2); }
   .send:hover{ filter: brightness(1.08); }
   .send[disabled]{ opacity:.6; cursor:not-allowed; }
-  .send svg{ width:22px; height:22px; display:block; fill:currentColor; filter: drop-shadow(0 1px 0 rgba(0,0,0,.45)); } /* visible siempre */
+  .send svg{ width:28px; height:28px; display:block; fill:currentColor; filter: drop-shadow(0 1px 0 rgba(0,0,0,.45)); } /* visible siempre */
   .send svg path{ stroke: rgba(0,0,0,.55); stroke-width: .6px; }
   .typing{ display:inline-flex; align-items:center; gap:4px; }
   .dot{ width:6px; height:6px; border-radius:50%; background:#606770; opacity:.4; animation:blink 1.2s infinite; }
@@ -293,17 +289,17 @@ add_shortcode('compostaje_gpt', function() {
       <div class="header">
         ${logoUrl ? `<img src="${logoUrl}" alt="Compostaje CEBAS para Niños">` : ''}
         <div class="title">Compostaje CEBAS Kids</div>
-        <p class="desc">Un proyecto del CEBAS-CSIC para aprender a compostar jugando.</p>
+        <p class="desc">Un rincón mágico del CEBAS-CSIC donde aprendemos a compostar como en un cuento.</p>
       </div>
       <div class="chips" id="chips">
-        <button class="chip" data-q="Que puedo poner en mi compostera?">Que puedo poner en mi compostera?</button>
-        <button class="chip" data-q="Por que es bueno hacer compost?">Por que es bueno hacer compost?</button>
-        <button class="chip" data-q="Cuanto tarda en hacerse el compost?">Cuanto tarda en hacerse el compost?</button>
-        <button class="chip" data-q="Que animales ayudan en el compost?">Que animales ayudan en el compost?</button>
+        <button class="chip" data-q="¿Qué cositas puedo echar en mi compostera mágica?">¿Qué cositas puedo echar en mi compostera mágica?</button>
+        <button class="chip" data-q="¿Por qué el compost hace feliz al huerto?">¿Por qué el compost hace feliz al huerto?</button>
+        <button class="chip" data-q="¿Cuánto tarda la poción del compost?">¿Cuánto tarda la poción del compost?</button>
+        <button class="chip" data-q="¿Qué bichitos ayudan en el compost?">¿Qué bichitos ayudan en el compost?</button>
       </div>
       <div class="msgs" id="msgs"></div>
       <div class="input">
-        <input class="field" id="field" type="text" placeholder="Escribe tu pregunta sobre compost..." autocomplete="off">
+        <input class="field" id="field" type="text" placeholder="Escribe aquí tu pregunta compostera..." autocomplete="off">
         <button class="send" id="send" aria-label="Enviar" title="Enviar">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 11.1c-.9-.4-.9-1.7 0-2.1L20.6 1.8c.9-.4 1.8.5 1.4 1.4l-7.2 18.1c-.3.8-1.5.7-1.8-.1l-2.2-5.4c-.1-.3-.4-.5-.7-.6l-7.6-3.1zM9.2 12.5l3.3 8.1 6.1-15.5-9.4 3.8 3.6 1.5c.5.2.6.9.2 1.2l-3.8 2.9z"></path></svg>
           <span style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden">Enviar</span>
@@ -336,7 +332,7 @@ add_shortcode('compostaje_gpt', function() {
     typingOn();
     setTimeout(function(){
       typingOff();
-      const welcome = 'Hola! Soy tu amigo del compost del CEBAS-CSIC. Estoy aqui para ensenarte como convertir restos de comida en abono para las plantas. Pregunta lo que quieras sobre compostaje!';
+      const welcome = '¡Hola, pequeño aventurero del compost! Soy tu amigo del CEBAS-CSIC. Juntos haremos magia con las cáscaras y las hojas para alimentar a las plantas. ¿Qué te gustaría saber?';
       history.push({role:'assistant',content:welcome});
       render('ai', welcome, false);
       persist();
@@ -410,7 +406,7 @@ add_shortcode('compostaje_gpt', function() {
       render('ai', reply);
     }catch(err){
       typingOff();
-      const msg = 'Error de conexión. Inténtalo de nuevo.';
+      const msg = 'Ups, parece que las lombrices están dormidas. ¡Inténtalo otra vez!';
       history.push({role:'assistant',content:msg});
       render('ai', msg);
       console.error(err);
@@ -462,13 +458,12 @@ function ck_gpt_chat() {
         $m['content'] = wp_strip_all_tags((string) $m['content']);
     } unset($m);
 
-    $system_prompt = "Eres \"Compostaje para Ninos\", un asistente del CEBAS-CSIC experto en compostaje y reciclaje. "
-        . "Tu mision es ensenar a los ninos como transformar los residuos organicos en abono de forma segura y divertida. "
-        . "Usa un lenguaje sencillo y ejemplos cotidianos. "
-        . "Si la pregunta no esta relacionada con el compostaje, redirige la conversacion al tema. "
+    $system_prompt = "Eres \"Compostaje para Niños\", un amiguito cuentacuentos del CEBAS-CSIC experto en compostaje y reciclaje. "
+        . "Tu misión es enseñar a los niños, con un tono alegre y mágico, cómo transformar los residuos orgánicos en abono de forma segura y divertida. "
+        . "Habla como en un cuento, usando un lenguaje muy sencillo, comparaciones juguetonas y ejemplos cotidianos. "
+        . "Si la pregunta no está relacionada con el compostaje, guía la conversación de vuelta al compost. "
         . "Anima siempre a cuidar el medio ambiente y a pedir ayuda a un adulto cuando sea necesario. "
-        . "Basate en la informacion divulgativa del CEBAS (https://www.cebas.csic.es/general_spain/presentacion.html) y no proporciones enlaces ni datos de contacto.";
-
+        . "Basate en la información divulgativa del CEBAS (https://www.cebas.csic.es/general_spain/presentacion.html) y no proporciones enlaces ni datos de contacto.";
 
     array_unshift($messages, ['role'=>'system','content'=>$system_prompt]);
 
@@ -530,5 +525,4 @@ function ck_gpt_chat() {
     echo json_encode(['reply'=>$reply]);
     wp_die();
 }
-
 ?>
