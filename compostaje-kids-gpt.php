@@ -10,6 +10,7 @@ if (!defined('ABSPATH')) exit;
 
 // On activation create log table
 register_activation_hook(__FILE__, function(){
+
     global $wpdb;
     $table = $wpdb->prefix . 'ck_gpt_logs';
     $charset = $wpdb->get_charset_collate();
@@ -26,6 +27,7 @@ register_activation_hook(__FILE__, function(){
     dbDelta($sql);
 });
 
+
 // Detect pages where the shortcode is used
 function ck_gpt_has_shortcode_page(){
     if (!is_singular()) return false;
@@ -38,6 +40,7 @@ function ck_gpt_has_shortcode_page(){
  * ========================= */
 add_action('wp_enqueue_scripts', function(){
     if (!ck_gpt_has_shortcode_page()) return;
+
 
     global $wp_scripts, $wp_styles;
 
@@ -52,6 +55,7 @@ add_action('wp_enqueue_scripts', function(){
             wp_dequeue_style($handle);
         }
     }
+
 
     if (function_exists('googlesitekit_enqueue_gtag')) {
         googlesitekit_enqueue_gtag();
@@ -197,7 +201,6 @@ add_shortcode('compostaje_gpt', function() {
   const ajaxUrl   = mount.getAttribute('data-ajax');
   const logoUrl   = mount.getAttribute('data-logo') || '';
   const themeOpt  = (mount.getAttribute('data-theme') || 'light').toLowerCase();
-
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:url(https://consultoriainformatica.net/wp-content/uploads/2025/08/Chatbot-en-el-Jardin-Compostero.jpg) center/cover no-repeat;display:flex;justify-content:center;align-items:center;';
   document.body.innerHTML = '';
@@ -466,6 +469,7 @@ function ck_gpt_chat() {
         . "Anima siempre a cuidar el medio ambiente y a pedir ayuda a un adulto cuando sea necesario. "
         . "Basate en la informacion divulgativa del CEBAS (https://www.cebas.csic.es/general_spain/presentacion.html) y no proporciones enlaces ni datos de contacto.";
 
+
     array_unshift($messages, ['role'=>'system','content'=>$system_prompt]);
 
     $response = wp_remote_post('https://api.openai.com/v1/chat/completions', [
@@ -526,4 +530,5 @@ function ck_gpt_chat() {
     echo json_encode(['reply'=>$reply]);
     wp_die();
 }
+
 ?>
