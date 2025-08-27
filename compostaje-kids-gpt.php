@@ -42,6 +42,12 @@ add_action('wp_enqueue_scripts', function(){
     }
 }, PHP_INT_MAX);
 
+// Ensure a gtag() stub exists early so events can queue before the GA script loads.
+add_action('wp_head', function(){
+    if (!ck_gpt_has_shortcode_page()) return;
+    echo "<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}</script>";
+}, 0);
+
 /* =========================
  *  ADMIN MENU & SETTINGS
  * ========================= */
@@ -261,9 +267,7 @@ add_shortcode('compostaje_gpt', function() {
     root.innerHTML = `<style>${css}${prefersDark ? darkCSS : ''}</style>${html}`;
   }
 
-  if (window.gtag) {
-    window.gtag('event','ck_chat_loaded',{event_category:'chatbot'});
-  }
+  window.gtag('event','ck_chat_loaded',{event_category:'chatbot'});
 
   // JS logic isolated
   const msgsEl = root.getElementById('msgs');
@@ -336,7 +340,7 @@ add_shortcode('compostaje_gpt', function() {
   async function send(txt){
     if(!txt || sending) return;
     setSending(true);
-    if(window.gtag){ window.gtag('event','ck_chat_message',{event_category:'chatbot'}); }
+    window.gtag('event','ck_chat_message',{event_category:'chatbot'});
     history.push({role:'user',content:txt});
     render('user', txt);
     fieldEl.value='';
@@ -353,14 +357,14 @@ add_shortcode('compostaje_gpt', function() {
       const reply = (data && data.reply) ? data.reply : (data && data.error ? data.error : 'No se pudo obtener respuesta.');
       history.push({role:'assistant',content:reply});
       render('ai', reply);
-      if(window.gtag){ window.gtag('event','ck_chat_reply',{event_category:'chatbot'}); }
+      window.gtag('event','ck_chat_reply',{event_category:'chatbot'});
     }catch(err){
       typingOff();
       const msg = 'Ups, parece que las lombrices están dormidas. ¡Inténtalo otra vez!';
       history.push({role:'assistant',content:msg});
       render('ai', msg);
       console.error(err);
-      if(window.gtag){ window.gtag('event','ck_chat_error',{event_category:'chatbot'}); }
+      window.gtag('event','ck_chat_error',{event_category:'chatbot'});
     }finally{
       persist(); scroll(); setSending(false);
     }
