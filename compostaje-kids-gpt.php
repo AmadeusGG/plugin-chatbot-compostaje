@@ -136,20 +136,34 @@ function ck_gpt_logs_page() {
     global $wpdb;
     $table = $wpdb->prefix . 'ck_gpt_logs';
     echo '<div class="wrap"><h1>Log de conversaciones</h1>';
-    $rows = $wpdb->get_results("SELECT email, user_msg, bot_reply, created FROM $table ORDER BY created DESC LIMIT 100");
-    if ($rows) {
-        echo '<table class="widefat striped"><thead><tr><th>Email</th><th>Usuario</th><th>ChatGPT</th><th>Fecha</th></tr></thead><tbody>';
-        foreach ($rows as $row) {
-            echo '<tr>';
-            echo '<td>' . esc_html($row->email) . '</td>';
-            echo '<td>' . esc_html($row->user_msg) . '</td>';
-            echo '<td>' . esc_html($row->bot_reply) . '</td>';
-            echo '<td>' . esc_html($row->created) . '</td>';
-            echo '</tr>';
+    if (isset($_GET['email'])) {
+        $email = sanitize_email($_GET['email']);
+        echo '<p><a href="' . esc_url(admin_url('admin.php?page=compostaje-kids-gpt-logs')) . '">&laquo; Volver</a></p>';
+        $rows = $wpdb->get_results($wpdb->prepare("SELECT user_msg, bot_reply, created FROM $table WHERE email = %s ORDER BY created ASC", $email));
+        if ($rows) {
+            echo '<h2>' . esc_html($email) . '</h2>';
+            foreach ($rows as $row) {
+                echo '<div style="margin-bottom:16px;padding:12px;border:1px solid #ccc;border-radius:6px;">';
+                echo '<p><strong>Usuario:</strong> ' . esc_html($row->user_msg) . '</p>';
+                echo '<p><strong>ChatGPT:</strong> ' . esc_html($row->bot_reply) . '</p>';
+                echo '<p style="font-size:12px;color:#666;">' . esc_html($row->created) . '</p>';
+                echo '</div>';
+            }
+        } else {
+            echo '<p>No hay registros para este email.</p>';
         }
-        echo '</tbody></table>';
     } else {
-        echo '<p>No hay conversaciones registradas.</p>';
+        $emails = $wpdb->get_col("SELECT DISTINCT email FROM $table ORDER BY email ASC");
+        if ($emails) {
+            echo '<table class="widefat striped"><thead><tr><th>Email</th></tr></thead><tbody>';
+            foreach ($emails as $mail) {
+                $url = admin_url('admin.php?page=compostaje-kids-gpt-logs&email=' . urlencode($mail));
+                echo '<tr><td><a href="' . esc_url($url) . '">' . esc_html($mail) . '</a></td></tr>';
+            }
+            echo '</tbody></table>';
+        } else {
+            echo '<p>No hay conversaciones registradas.</p>';
+        }
     }
     echo '</div>';
 }
@@ -375,9 +389,6 @@ add_shortcode('compostaje_gpt', function() {
     setSending(true);
     history.push({role:'user',content:txt});
     render('user', txt);
-    if (typeof gtag === 'function') {
-      gtag('event', 'chat_message', {'event_category':'Compostaje Kids GPT'});
-    }
     fieldEl.value='';
     typingOn();
     try{
@@ -392,9 +403,6 @@ add_shortcode('compostaje_gpt', function() {
       const reply = (data && data.reply) ? data.reply : (data && data.error ? data.error : 'No se pudo obtener respuesta.');
       history.push({role:'assistant',content:reply});
       render('ai', reply);
-      if (typeof gtag === 'function') {
-        gtag('event', 'chat_reply', {'event_category':'Compostaje Kids GPT'});
-      }
     }catch(err){
       typingOff();
       const msg = 'Ups, parece que las lombrices están dormidas. ¡Inténtalo otra vez!';
@@ -449,11 +457,11 @@ function ck_gpt_chat() {
         $m['content'] = wp_strip_all_tags((string) $m['content']);
     } unset($m);
 
-    $system_prompt = "Eres \"Compostaje para Niñas y Niños\", un amiguito cuentacuentos del CEBAS-CSIC experto en compostaje y reciclaje. "
-        . "Tu misión es enseñar a niñas, niños y demás infancias, con un tono alegre y mágico, cómo transformar los residuos orgánicos en abono de forma segura y divertida. "
+    $system_prompt = "Eres \"Compostaje para Niños\", un amiguito cuentacuentos del CEBAS-CSIC experto en compostaje y reciclaje. "
+        . "Tu misión es enseñar a los niños, con un tono alegre y mágico, cómo transformar los residuos orgánicos en abono de forma segura y divertida. "
         . "Habla como en un cuento, usando un lenguaje muy sencillo, comparaciones juguetonas y ejemplos cotidianos. "
         . "Si la pregunta no está relacionada con el compostaje, guía la conversación de vuelta al compost. "
-        . "Anima siempre a cuidar el medio ambiente y a pedir ayuda a una persona adulta cuando sea necesario. "
+        . "Anima siempre a cuidar el medio ambiente y a pedir ayuda a un adulto cuando sea necesario. "
         . "Basate en la información divulgativa del CEBAS (https://www.cebas.csic.es/general_spain/presentacion.html) y no proporciones enlaces ni datos de contacto.";
 
     array_unshift($messages, ['role'=>'system','content'=>$system_prompt]);
@@ -493,22 +501,24 @@ function ck_gpt_chat() {
     }
 
     $user = wp_get_current_user();
-    $email = isset($user->user_email) && $user->user_email ? $user->user_email : 'anonimo';
-    $lastUserMsg = '';
-    for ($i = count($messages) - 1; $i >= 0; $i--) {
-        if (isset($messages[$i]['role']) && $messages[$i]['role'] === 'user') {
-            $lastUserMsg = $messages[$i]['content'];
-            break;
+    $email = isset($user->user_email) ? $user->user_email : '';
+    if ($email) {
+        $lastUserMsg = '';
+        for ($i = count($messages) - 1; $i >= 0; $i--) {
+            if (isset($messages[$i]['role']) && $messages[$i]['role'] === 'user') {
+                $lastUserMsg = $messages[$i]['content'];
+                break;
+            }
         }
-    }
-    if ($lastUserMsg !== '') {
-        global $wpdb;
-        $wpdb->insert($wpdb->prefix . 'ck_gpt_logs', [
-            'email' => $email,
-            'user_msg' => $lastUserMsg,
-            'bot_reply' => $reply,
-            'created' => current_time('mysql')
-        ], ['%s','%s','%s','%s']);
+        if ($lastUserMsg !== '') {
+            global $wpdb;
+            $wpdb->insert($wpdb->prefix . 'ck_gpt_logs', [
+                'email' => $email,
+                'user_msg' => $lastUserMsg,
+                'bot_reply' => $reply,
+                'created' => current_time('mysql')
+            ], ['%s','%s','%s','%s']);
+        }
     }
 
     echo json_encode(['reply'=>$reply]);
