@@ -1,30 +1,12 @@
 <?php
 /*
 Plugin Name: Compostaje Kids GPT
-Description: Asistente de compostaje para ninos. Shortcode: [compostaje_gpt]
+Description: Asistente de compostaje para peques. Shortcode: [compostaje_gpt]
 Version: 1.0
 Author: Amadeo
 */
 
 if (!defined('ABSPATH')) exit;
-
-// On activation create log table
-register_activation_hook(__FILE__, function(){
-    global $wpdb;
-    $table = $wpdb->prefix . 'ck_gpt_logs';
-    $charset = $wpdb->get_charset_collate();
-    $sql = "CREATE TABLE $table (
-        id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-        email varchar(190) NOT NULL,
-        user_msg longtext NOT NULL,
-        bot_reply longtext NOT NULL,
-        created datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY  (id),
-        KEY email (email)
-    ) $charset;";
-    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-    dbDelta($sql);
-});
 
 // Detect pages where the shortcode is used
 function ck_gpt_has_shortcode_page(){
@@ -60,6 +42,12 @@ add_action('wp_enqueue_scripts', function(){
     }
 }, PHP_INT_MAX);
 
+// Ensure a gtag() stub exists early so events can queue before the GA script loads.
+add_action('wp_head', function(){
+    if (!ck_gpt_has_shortcode_page()) return;
+    echo "<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}</script>";
+}, 0);
+
 /* =========================
  *  ADMIN MENU & SETTINGS
  * ========================= */
@@ -67,7 +55,6 @@ add_action('admin_menu', function() {
     add_menu_page('Compostaje Kids GPT', 'Compostaje Kids GPT', 'manage_options', 'compostaje-kids-gpt', 'ck_gpt_settings_page', 'dashicons-format-chat');
     add_submenu_page('compostaje-kids-gpt', 'Ajustes', 'Ajustes', 'manage_options', 'compostaje-kids-gpt', 'ck_gpt_settings_page');
     add_submenu_page('compostaje-kids-gpt', 'Shortcode', 'Shortcode', 'manage_options', 'compostaje-kids-gpt-shortcode', 'ck_gpt_shortcode_page');
-    add_submenu_page('compostaje-kids-gpt', 'Log de conversaciones', 'Log de conversaciones', 'manage_options', 'compostaje-kids-gpt-logs', 'ck_gpt_logs_page');
 });
 
 add_action('admin_init', function() {
@@ -131,42 +118,6 @@ function ck_gpt_shortcode_page() { ?>
         <p>Recomendación: crea una página “Agente IA” y pega el shortcode en el bloque “Código corto”.</p>
     </div>
 <?php }
-
-function ck_gpt_logs_page() {
-    global $wpdb;
-    $table = $wpdb->prefix . 'ck_gpt_logs';
-    echo '<div class="wrap"><h1>Log de conversaciones</h1>';
-    if (isset($_GET['email'])) {
-        $email = sanitize_email($_GET['email']);
-        echo '<p><a href="' . esc_url(admin_url('admin.php?page=compostaje-kids-gpt-logs')) . '">&laquo; Volver</a></p>';
-        $rows = $wpdb->get_results($wpdb->prepare("SELECT user_msg, bot_reply, created FROM $table WHERE email = %s ORDER BY created ASC", $email));
-        if ($rows) {
-            echo '<h2>' . esc_html($email) . '</h2>';
-            foreach ($rows as $row) {
-                echo '<div style="margin-bottom:16px;padding:12px;border:1px solid #ccc;border-radius:6px;">';
-                echo '<p><strong>Usuario:</strong> ' . esc_html($row->user_msg) . '</p>';
-                echo '<p><strong>ChatGPT:</strong> ' . esc_html($row->bot_reply) . '</p>';
-                echo '<p style="font-size:12px;color:#666;">' . esc_html($row->created) . '</p>';
-                echo '</div>';
-            }
-        } else {
-            echo '<p>No hay registros para este email.</p>';
-        }
-    } else {
-        $emails = $wpdb->get_col("SELECT DISTINCT email FROM $table ORDER BY email ASC");
-        if ($emails) {
-            echo '<table class="widefat striped"><thead><tr><th>Email</th></tr></thead><tbody>';
-            foreach ($emails as $mail) {
-                $url = admin_url('admin.php?page=compostaje-kids-gpt-logs&email=' . urlencode($mail));
-                echo '<tr><td><a href="' . esc_url($url) . '">' . esc_html($mail) . '</a></td></tr>';
-            }
-            echo '</tbody></table>';
-        } else {
-            echo '<p>No hay conversaciones registradas.</p>';
-        }
-    }
-    echo '</div>';
-}
 
 /* =========================
  *  FRONTEND (SHORTCODE) — Shadow DOM aislado
@@ -286,7 +237,7 @@ add_shortcode('compostaje_gpt', function() {
   const html = `
     <div class="wrap">
       <div class="header">
-        ${logoUrl ? `<img src="${logoUrl}" alt="Compostaje CEBAS para Niños">` : ''}
+        ${logoUrl ? `<img src="${logoUrl}" alt="Compostaje CEBAS para peques">` : ''}
         <div class="title">Compostaje CEBAS Kids</div>
         <p class="desc">Un rincón mágico del CEBAS-CSIC donde aprendemos a compostar como en un cuento.</p>
       </div>
@@ -316,6 +267,8 @@ add_shortcode('compostaje_gpt', function() {
     root.innerHTML = `<style>${css}${prefersDark ? darkCSS : ''}</style>${html}`;
   }
 
+  window.gtag('event','ck_chat_loaded',{event_category:'chatbot'});
+
   // JS logic isolated
   const msgsEl = root.getElementById('msgs');
   const fieldEl = root.getElementById('field');
@@ -331,7 +284,7 @@ add_shortcode('compostaje_gpt', function() {
     typingOn();
     setTimeout(function(){
       typingOff();
-      const welcome = '¡Hola, pequeño aventurero del compost! Soy tu amigo del CEBAS-CSIC. Juntos haremos magia con las cáscaras y las hojas para alimentar a las plantas. ¿Qué te gustaría saber?';
+      const welcome = '¡Hola, peque aventurerx del compost! Soy tu amigue del CEBAS-CSIC. Juntxs haremos magia con las cáscaras y las hojas para alimentar a las plantas. ¿Qué te gustaría saber?';
       history.push({role:'assistant',content:welcome});
       render('ai', welcome, false);
       persist();
@@ -387,6 +340,7 @@ add_shortcode('compostaje_gpt', function() {
   async function send(txt){
     if(!txt || sending) return;
     setSending(true);
+    window.gtag('event','ck_chat_message',{event_category:'chatbot'});
     history.push({role:'user',content:txt});
     render('user', txt);
     fieldEl.value='';
@@ -403,12 +357,14 @@ add_shortcode('compostaje_gpt', function() {
       const reply = (data && data.reply) ? data.reply : (data && data.error ? data.error : 'No se pudo obtener respuesta.');
       history.push({role:'assistant',content:reply});
       render('ai', reply);
+      window.gtag('event','ck_chat_reply',{event_category:'chatbot'});
     }catch(err){
       typingOff();
       const msg = 'Ups, parece que las lombrices están dormidas. ¡Inténtalo otra vez!';
       history.push({role:'assistant',content:msg});
       render('ai', msg);
       console.error(err);
+      window.gtag('event','ck_chat_error',{event_category:'chatbot'});
     }finally{
       persist(); scroll(); setSending(false);
     }
@@ -457,11 +413,11 @@ function ck_gpt_chat() {
         $m['content'] = wp_strip_all_tags((string) $m['content']);
     } unset($m);
 
-    $system_prompt = "Eres \"Compostaje para Niños\", un amiguito cuentacuentos del CEBAS-CSIC experto en compostaje y reciclaje. "
-        . "Tu misión es enseñar a los niños, con un tono alegre y mágico, cómo transformar los residuos orgánicos en abono de forma segura y divertida. "
-        . "Habla como en un cuento, usando un lenguaje muy sencillo, comparaciones juguetonas y ejemplos cotidianos. "
+    $system_prompt = "Eres \"Compostaje para Peques\", un personaje cuentacuentos del CEBAS-CSIC experto en compostaje y reciclaje. "
+        . "Tu misión es enseñar, con un tono alegre y mágico, cómo transformar los residuos orgánicos en abono de forma segura y divertida. "
+        . "Habla como en un cuento, usando un lenguaje muy sencillo, comparaciones juguetonas y ejemplos cotidianos, con lenguaje inclusivo dirigido a niñas, niños y niñes. "
         . "Si la pregunta no está relacionada con el compostaje, guía la conversación de vuelta al compost. "
-        . "Anima siempre a cuidar el medio ambiente y a pedir ayuda a un adulto cuando sea necesario. "
+        . "Anima siempre a cuidar el medio ambiente y a pedir ayuda a una persona adulta cuando sea necesario. "
         . "Basate en la información divulgativa del CEBAS (https://www.cebas.csic.es/general_spain/presentacion.html) y no proporciones enlaces ni datos de contacto.";
 
     array_unshift($messages, ['role'=>'system','content'=>$system_prompt]);
@@ -498,27 +454,6 @@ function ck_gpt_chat() {
     if (!$reply) {
         echo json_encode(['reply'=>null, 'error'=>'Respuesta vacía de OpenAI.']);
         wp_die();
-    }
-
-    $user = wp_get_current_user();
-    $email = isset($user->user_email) ? $user->user_email : '';
-    if ($email) {
-        $lastUserMsg = '';
-        for ($i = count($messages) - 1; $i >= 0; $i--) {
-            if (isset($messages[$i]['role']) && $messages[$i]['role'] === 'user') {
-                $lastUserMsg = $messages[$i]['content'];
-                break;
-            }
-        }
-        if ($lastUserMsg !== '') {
-            global $wpdb;
-            $wpdb->insert($wpdb->prefix . 'ck_gpt_logs', [
-                'email' => $email,
-                'user_msg' => $lastUserMsg,
-                'bot_reply' => $reply,
-                'created' => current_time('mysql')
-            ], ['%s','%s','%s','%s']);
-        }
     }
 
     echo json_encode(['reply'=>$reply]);
