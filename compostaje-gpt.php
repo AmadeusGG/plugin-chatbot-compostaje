@@ -172,34 +172,20 @@ function ci_gpt_logs_page() {
     global $wpdb;
     $table = $wpdb->prefix . 'ci_gpt_logs';
     echo '<div class="wrap"><h1>Log de conversaciones</h1>';
-    if (isset($_GET['email'])) {
-        $email = sanitize_email($_GET['email']);
-        echo '<p><a href="' . esc_url(admin_url('admin.php?page=consultoria-gpt-logs')) . '">&laquo; Volver</a></p>';
-        $rows = $wpdb->get_results($wpdb->prepare("SELECT user_msg, bot_reply, created FROM $table WHERE email = %s ORDER BY created ASC", $email));
-        if ($rows) {
-            echo '<h2>' . esc_html($email) . '</h2>';
-            foreach ($rows as $row) {
-                echo '<div style="margin-bottom:16px;padding:12px;border:1px solid #ccc;border-radius:6px;">';
-                echo '<p><strong>Usuario:</strong> ' . esc_html($row->user_msg) . '</p>';
-                echo '<p><strong>ChatGPT:</strong> ' . esc_html($row->bot_reply) . '</p>';
-                echo '<p style="font-size:12px;color:#666;">' . esc_html($row->created) . '</p>';
-                echo '</div>';
-            }
-        } else {
-            echo '<p>No hay registros para este email.</p>';
+    $rows = $wpdb->get_results("SELECT email, user_msg, bot_reply, created FROM $table ORDER BY created DESC LIMIT 100");
+    if ($rows) {
+        echo '<table class="widefat striped"><thead><tr><th>Email</th><th>Usuario</th><th>ChatGPT</th><th>Fecha</th></tr></thead><tbody>';
+        foreach ($rows as $row) {
+            echo '<tr>';
+            echo '<td>' . esc_html($row->email) . '</td>';
+            echo '<td>' . esc_html($row->user_msg) . '</td>';
+            echo '<td>' . esc_html($row->bot_reply) . '</td>';
+            echo '<td>' . esc_html($row->created) . '</td>';
+            echo '</tr>';
         }
+        echo '</tbody></table>';
     } else {
-        $emails = $wpdb->get_col("SELECT DISTINCT email FROM $table ORDER BY email ASC");
-        if ($emails) {
-            echo '<table class="widefat striped"><thead><tr><th>Email</th></tr></thead><tbody>';
-            foreach ($emails as $mail) {
-                $url = admin_url('admin.php?page=consultoria-gpt-logs&email=' . urlencode($mail));
-                echo '<tr><td><a href="' . esc_url($url) . '">' . esc_html($mail) . '</a></td></tr>';
-            }
-            echo '</tbody></table>';
-        } else {
-            echo '<p>No hay conversaciones registradas.</p>';
-        }
+        echo '<p>No hay conversaciones registradas.</p>';
     }
     echo '</div>';
 }
@@ -557,6 +543,9 @@ add_shortcode('consultoria_gpt', function() {
     setSending(true);
     history.push({role:'user',content:txt});
     render('user', txt);
+    if (typeof gtag === 'function') {
+      gtag('event', 'chat_message', {'event_category':'Consultoria GPT'});
+    }
     fieldEl.value='';
     typingOn();
     try{
@@ -571,6 +560,9 @@ add_shortcode('consultoria_gpt', function() {
       const reply = (data && data.reply) ? data.reply : (data && data.error ? data.error : 'No se pudo obtener respuesta.');
       history.push({role:'assistant',content:reply});
       render('ai', reply);
+      if (typeof gtag === 'function') {
+        gtag('event', 'chat_reply', {'event_category':'Consultoria GPT'});
+      }
     }catch(err){
       typingOff();
       const msg = 'Error de conexión. Inténtalo de nuevo.';
@@ -628,10 +620,10 @@ function ci_gpt_chat() {
     } unset($m);
 
     $system_prompt = "Eres “Consultoría Informática”, un asistente especializado que representa a la empresa consultoriainformatica.net. "
-        . "Tu función es asesorar a los usuarios sobre los servicios que ofrece la empresa, como: desarrollo web en WordPress, inteligencia artificial, automatización de procesos, SEO, formación en IA y consultoría tecnológica para pymes. "
+        . "Tu función es asesorar de forma inclusiva a todas las personas sobre los servicios que ofrece la empresa, como: desarrollo web en WordPress, inteligencia artificial, automatización de procesos, SEO, formación en IA y consultoría tecnológica para pymes. "
         . "Solo puedes utilizar información disponible en la web oficial: https://consultoriainformatica.net/. No inventes servicios ni detalles. "
-        . "Si no estás seguro de algo, invita al usuario a consultar directamente con el equipo o visitar la web. "
-        . "Tu tono es profesional, claro y directo. Ayuda al usuario con lenguaje humano, sin tecnicismos innecesarios. "
+        . "Si no estás seguro de algo, invita a quien consulta a comunicarse directamente con el equipo o visitar la web. "
+        . "Tu tono es profesional, claro y directo. Utiliza un lenguaje humano e inclusivo, sin tecnicismos innecesarios. "
         . "Datos de contacto: WhatsApp 643 93 21 21, Email info@consultoriainformatica.net, Web https://consultoriainformatica.net/.";
 
     array_unshift($messages, ['role'=>'system','content'=>$system_prompt]);
@@ -671,24 +663,22 @@ function ci_gpt_chat() {
     }
 
     $user = wp_get_current_user();
-    $email = isset($user->user_email) ? $user->user_email : '';
-    if ($email) {
-        $lastUserMsg = '';
-        for ($i = count($messages) - 1; $i >= 0; $i--) {
-            if (isset($messages[$i]['role']) && $messages[$i]['role'] === 'user') {
-                $lastUserMsg = $messages[$i]['content'];
-                break;
-            }
+    $email = isset($user->user_email) && $user->user_email ? $user->user_email : 'anonimo';
+    $lastUserMsg = '';
+    for ($i = count($messages) - 1; $i >= 0; $i--) {
+        if (isset($messages[$i]['role']) && $messages[$i]['role'] === 'user') {
+            $lastUserMsg = $messages[$i]['content'];
+            break;
         }
-        if ($lastUserMsg !== '') {
-            global $wpdb;
-            $wpdb->insert($wpdb->prefix . 'ci_gpt_logs', [
-                'email' => $email,
-                'user_msg' => $lastUserMsg,
-                'bot_reply' => $reply,
-                'created' => current_time('mysql')
-            ], ['%s','%s','%s','%s']);
-        }
+    }
+    if ($lastUserMsg !== '') {
+        global $wpdb;
+        $wpdb->insert($wpdb->prefix . 'ci_gpt_logs', [
+            'email' => $email,
+            'user_msg' => $lastUserMsg,
+            'bot_reply' => $reply,
+            'created' => current_time('mysql')
+        ], ['%s','%s','%s','%s']);
     }
 
     echo json_encode(['reply'=>$reply]);
