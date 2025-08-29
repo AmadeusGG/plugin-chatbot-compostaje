@@ -288,6 +288,19 @@ add_shortcode('compostaje_gpt', function() {
     const chips   = root.getElementById('chips');
     let sending = false;
     let recognition = null;
+    let selectedVoice = null;
+
+    if ('speechSynthesis' in window){
+      const pickVoice = () => {
+        const voices = window.speechSynthesis.getVoices();
+        selectedVoice = voices.find(v => v.lang === 'es-ES' && /joven|child|niñ|youth|chico|chica/i.test(v.name)) ||
+                        voices.find(v => v.lang === 'es-ES') ||
+                        voices.find(v => v.lang && v.lang.startsWith('es')) || null;
+      };
+      pickVoice();
+      window.speechSynthesis.onvoiceschanged = pickVoice;
+    }
+
 
   // History
   let history = [];
@@ -312,11 +325,17 @@ add_shortcode('compostaje_gpt', function() {
     function typingOff(){ Array.from(msgsEl.querySelectorAll('[data-typing="1"]')).forEach(n=>n.remove()); }
 
     function speak(text){
-      if ('speechSynthesis' in window){
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = 'es-ES';
-        window.speechSynthesis.speak(u);
-      }
+      if (!('speechSynthesis' in window)) return;
+      const clean = text
+        .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')
+        .replace(/<[^>]*>/g, '');
+      const u = new SpeechSynthesisUtterance(clean);
+      u.lang = 'es-ES';
+      u.pitch = 1.2;
+      u.rate  = 1.15;
+      if (selectedVoice) u.voice = selectedVoice;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
     }
 
   function typeText(el, text, done){
@@ -349,7 +368,8 @@ add_shortcode('compostaje_gpt', function() {
         const txt = document.createElement('div');
         bubble.appendChild(txt);
           if(role === 'ai'){
-            typeText(txt, text, () => speak(text));
+            speak(text);
+            typeText(txt, text);
           } else {
             txt.textContent = text;
           }
