@@ -206,8 +206,13 @@ add_shortcode('compostaje_gpt', function() {
   .send:hover{ filter: brightness(1.08); }
   .send[disabled]{ opacity:.6; cursor:not-allowed; }
   .send svg{ width:28px; height:28px; display:block; fill:currentColor; filter: drop-shadow(0 1px 0 rgba(0,0,0,.45)); } /* visible siempre */
-  .send svg path{ stroke: rgba(0,0,0,.55); stroke-width: .6px; }
-  .typing{ display:inline-flex; align-items:center; gap:4px; }
+    .send svg path{ stroke: rgba(0,0,0,.55); stroke-width: .6px; }
+    .mic{ width:56px; min-width:56px; height:56px; display:flex; align-items:center; justify-content:center; border:none; border-radius:16px; background:#34d399; color:#fff; cursor:pointer; box-shadow: 0 1px 0 rgba(0,0,0,.12), inset 0 0 0 1px rgba(255,255,255,.2); }
+    .mic:hover{ filter: brightness(1.08); }
+    .mic.active{ background:#dc2626; }
+    .mic svg{ width:28px; height:28px; display:block; fill:currentColor; filter: drop-shadow(0 1px 0 rgba(0,0,0,.45)); }
+    .mic[disabled]{ opacity:.6; cursor:not-allowed; }
+    .typing{ display:inline-flex; align-items:center; gap:4px; }
   .dot{ width:6px; height:6px; border-radius:50%; background:#606770; opacity:.4; animation:blink 1.2s infinite; }
   .dot:nth-child(2){ animation-delay:.2s; } .dot:nth-child(3){ animation-delay:.4s; }
   @keyframes blink{ 0%,80%,100%{opacity:.2} 40%{opacity:1} }
@@ -250,6 +255,10 @@ add_shortcode('compostaje_gpt', function() {
       <div class="msgs" id="msgs"></div>
       <div class="input">
         <input class="field" id="field" type="text" placeholder="Escribe aquí tu pregunta compostera..." autocomplete="off">
+        <button class="mic" id="mic" aria-label="Hablar" title="Hablar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 003-3V5a3 3 0 10-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 0014 0h-2zM11 19h2v3h-2z"></path></svg>
+          <span style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden">Hablar</span>
+        </button>
         <button class="send" id="send" aria-label="Enviar" title="Enviar">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 11.1c-.9-.4-.9-1.7 0-2.1L20.6 1.8c.9-.4 1.8.5 1.4 1.4l-7.2 18.1c-.3.8-1.5.7-1.8-.1l-2.2-5.4c-.1-.3-.4-.5-.7-.6l-7.6-3.1zM9.2 12.5l3.3 8.1 6.1-15.5-9.4 3.8 3.6 1.5c.5.2.6.9.2 1.2l-3.8 2.9z"></path></svg>
           <span style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden">Enviar</span>
@@ -274,9 +283,11 @@ add_shortcode('compostaje_gpt', function() {
   // JS logic isolated
   const msgsEl = root.getElementById('msgs');
   const fieldEl = root.getElementById('field');
-  const sendBtn = root.getElementById('send');
-  const chips = root.getElementById('chips');
-  let sending = false;
+    const sendBtn = root.getElementById('send');
+    const micBtn  = root.getElementById('mic');
+    const chips   = root.getElementById('chips');
+    let sending = false;
+    let recognition = null;
 
   // History
   let history = [];
@@ -295,10 +306,18 @@ add_shortcode('compostaje_gpt', function() {
   }
 
   function persist(){ try{ localStorage.setItem('ckMessages', JSON.stringify(history)); } catch(e){} }
-  function scroll(){ msgsEl.scrollTop = msgsEl.scrollHeight; }
-  function setSending(state){ sending = state; sendBtn.disabled = state; Array.from(chips.children).forEach(b=>b.disabled=state); }
-  function typingOn(){ render('ai','',true); scroll(); }
-  function typingOff(){ Array.from(msgsEl.querySelectorAll('[data-typing="1"]')).forEach(n=>n.remove()); }
+    function scroll(){ msgsEl.scrollTop = msgsEl.scrollHeight; }
+    function setSending(state){ sending = state; sendBtn.disabled = state; Array.from(chips.children).forEach(b=>b.disabled=state); }
+    function typingOn(){ render('ai','',true); scroll(); }
+    function typingOff(){ Array.from(msgsEl.querySelectorAll('[data-typing="1"]')).forEach(n=>n.remove()); }
+
+    function speak(text){
+      if ('speechSynthesis' in window){
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'es-ES';
+        window.speechSynthesis.speak(u);
+      }
+    }
 
   function typeText(el, text, done){
     let i = 0;
@@ -329,11 +348,11 @@ add_shortcode('compostaje_gpt', function() {
       } else {
         const txt = document.createElement('div');
         bubble.appendChild(txt);
-        if(role === 'ai'){
-          typeText(txt, text);
-        } else {
-          txt.textContent = text;
-        }
+          if(role === 'ai'){
+            typeText(txt, text, () => speak(text));
+          } else {
+            txt.textContent = text;
+          }
       }
       row.appendChild(bubble);
       msgsEl.appendChild(row);
@@ -378,7 +397,23 @@ add_shortcode('compostaje_gpt', function() {
     }
   }
 
+  if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SR();
+    recognition.lang = 'es-ES';
+    recognition.interimResults = false;
+    recognition.onresult = (e) => {
+      const transcript = e.results[0][0].transcript.trim();
+      if (transcript) send(transcript);
+    };
+    recognition.onstart = () => { micBtn.classList.add('active'); };
+    recognition.onend = () => { micBtn.classList.remove('active'); };
+  } else {
+    micBtn.disabled = true;
+  }
+
   sendBtn.addEventListener('click', ()=> send(fieldEl.value.trim()));
+  micBtn.addEventListener('click', ()=>{ if(recognition) recognition.start(); });
   fieldEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(fieldEl.value.trim()); } });
   chips.addEventListener('click', (e)=>{
     const b = e.target.closest('.chip'); if(!b) return;
