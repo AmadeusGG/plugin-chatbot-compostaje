@@ -293,14 +293,19 @@ add_shortcode('compostaje_gpt', function() {
     if ('speechSynthesis' in window){
       const pickVoice = () => {
         const voices = window.speechSynthesis.getVoices();
-        selectedVoice = voices.find(v => v.lang === 'es-ES' && /joven|child|niñ|youth|chico|chica/i.test(v.name)) ||
+        const prefer = [
+          'Google español de España',
+          'Google español',
+          'Microsoft Helena Desktop - Spanish (Spain)'
+        ];
+        selectedVoice = voices.find(v => prefer.includes(v.name)) ||
+                        voices.find(v => v.name && v.name.toLowerCase().includes('google') && v.lang === 'es-ES') ||
                         voices.find(v => v.lang === 'es-ES') ||
                         voices.find(v => v.lang && v.lang.startsWith('es')) || null;
       };
       pickVoice();
       window.speechSynthesis.onvoiceschanged = pickVoice;
     }
-
 
   // History
   let history = [];
@@ -324,34 +329,37 @@ add_shortcode('compostaje_gpt', function() {
     function typingOn(){ render('ai','',true); scroll(); }
     function typingOff(){ Array.from(msgsEl.querySelectorAll('[data-typing="1"]')).forEach(n=>n.remove()); }
 
-    function speak(text){
-      if (!('speechSynthesis' in window)) return;
+
+    function typeText(el, text){
+      let i = 0;
+      const speed = 27;
+      (function add(){
+        el.textContent += text.charAt(i);
+        i++; scroll();
+        if(i < text.length){ setTimeout(add, speed); }
+      })();
+    }
+
+    function speakAndType(el, text){
+      if (!('speechSynthesis' in window)) { typeText(el, text); return; }
       const clean = text
         .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')
         .replace(/<[^>]*>/g, '');
+      const words = clean.split(/\s+/);
+      let spoken = 0;
       const u = new SpeechSynthesisUtterance(clean);
       u.lang = 'es-ES';
-      u.pitch = 1.2;
-      u.rate  = 1.15;
+      u.pitch = 1.1;
+      u.rate  = 1;
       if (selectedVoice) u.voice = selectedVoice;
+      u.onboundary = (e) => {
+        if(e.name === 'word'){ spoken++; el.textContent = words.slice(0, spoken).join(' '); scroll(); }
+      };
+      u.onend = () => { el.textContent = text; };
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
     }
 
-  function typeText(el, text, done){
-    let i = 0;
-    const speed = 27; // 40ms / 1.5 → 1.5x faster typing
-    (function add(){
-      el.textContent += text.charAt(i);
-      i++;
-      scroll();
-      if(i < text.length){
-        setTimeout(add, speed);
-      } else if(done){
-        done();
-      }
-    })();
-  }
 
     function render(role, text, typing=false){
       const row = document.createElement('div');
@@ -368,8 +376,7 @@ add_shortcode('compostaje_gpt', function() {
         const txt = document.createElement('div');
         bubble.appendChild(txt);
           if(role === 'ai'){
-            speak(text);
-            typeText(txt, text);
+            speakAndType(txt, text);
           } else {
             txt.textContent = text;
           }
