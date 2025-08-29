@@ -344,20 +344,16 @@ add_shortcode('compostaje_gpt', function() {
       if (!('speechSynthesis' in window)) { typeText(el, text); return; }
       const clean = text
         .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')
+        .replace(/[\*#_~`>\[\]\(\){}]/g, '')
         .replace(/<[^>]*>/g, '');
-      const words = clean.split(/\s+/);
-      let spoken = 0;
       const u = new SpeechSynthesisUtterance(clean);
       u.lang = 'es-ES';
       u.pitch = 1.1;
       u.rate  = 1;
       if (selectedVoice) u.voice = selectedVoice;
-      u.onboundary = (e) => {
-        if(e.name === 'word'){ spoken++; el.textContent = words.slice(0, spoken).join(' '); scroll(); }
-      };
-      u.onend = () => { el.textContent = text; };
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
+      typeText(el, text);
     }
 
 
