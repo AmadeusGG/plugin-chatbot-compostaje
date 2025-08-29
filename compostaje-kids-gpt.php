@@ -183,7 +183,7 @@ add_shortcode('compostaje_gpt', function() {
   }
   .wrap{ position:absolute; inset:0; display:flex; flex-direction:column; width:100%; height:100%; margin:0; border:none; border-radius:0; overflow:hidden; background:#fff; box-shadow:none; opacity:0.9; }
   .header{ position:relative; padding:18px 20px; background:var(--mut); border-bottom:1px solid var(--bd); display:flex; align-items:center; gap:20px; }
-  .header img{ max-height:80px; display:block; flex-shrink:0; }
+  .header img{ max-height:125px; display:block; flex-shrink:0; }
   .header .text{ flex:1; }
   .title{ margin:4px 0 2px; font-size: clamp(26px,5vw,40px); font-weight:800; }
   .desc{ margin:0; font-size: clamp(18px,3vw,26px); color:#4b5563; }
