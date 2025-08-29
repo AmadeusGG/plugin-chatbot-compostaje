@@ -301,6 +301,7 @@ add_shortcode('compostaje_gpt', function() {
       window.speechSynthesis.onvoiceschanged = pickVoice;
     }
 
+
   // History
   let history = [];
   try { const saved = localStorage.getItem('ckMessages'); if(saved) history = JSON.parse(saved); } catch(e){}
