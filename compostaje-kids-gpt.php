@@ -329,6 +329,7 @@ add_shortcode('compostaje_gpt', function() {
     function typingOn(){ render('ai','',true); scroll(); }
     function typingOff(){ Array.from(msgsEl.querySelectorAll('[data-typing="1"]')).forEach(n=>n.remove()); }
 
+
     function typeText(el, text){
       let i = 0;
       const speed = 27;
@@ -358,6 +359,7 @@ add_shortcode('compostaje_gpt', function() {
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
     }
+
 
     function render(role, text, typing=false){
       const row = document.createElement('div');
