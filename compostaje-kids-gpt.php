@@ -182,8 +182,9 @@ add_shortcode('compostaje_gpt', function() {
     --chip:#e1f5fe; --chip-b:#b3e5fc; --chip-text:#0f172a;
   }
   .wrap{ position:absolute; inset:0; display:flex; flex-direction:column; width:100%; height:100%; margin:0; border:none; border-radius:0; overflow:hidden; background:#fff; box-shadow:none; opacity:0.9; }
-  .header{ position:relative; text-align:center; padding:18px 20px; background:var(--mut); border-bottom:1px solid var(--bd); }
-  .header img{ max-height:80px; margin:0 auto 12px; display:block; }
+  .header{ position:relative; padding:18px 20px; background:var(--mut); border-bottom:1px solid var(--bd); display:flex; align-items:center; gap:20px; }
+  .header img{ max-height:80px; display:block; flex-shrink:0; }
+  .header .text{ flex:1; }
   .title{ margin:4px 0 2px; font-size: clamp(26px,5vw,40px); font-weight:800; }
   .desc{ margin:0; font-size: clamp(18px,3vw,26px); color:#4b5563; }
   .chips{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; padding:12px; background:var(--mut2); border-bottom:1px solid #eef2f7; overflow-x:auto; scroll-snap-type:x mandatory; }
@@ -242,9 +243,11 @@ add_shortcode('compostaje_gpt', function() {
   const html = `
     <div class="wrap">
       <div class="header">
-        ${logoUrl ? `<img src="${logoUrl}" alt="Compostaje CEBAS para peques">` : ''}
-        <div class="title">Compostaje CEBAS Kids</div>
-        <p class="desc">Un rincón mágico del CEBAS-CSIC donde aprendemos a compostar como en un cuento.</p>
+        ${logoUrl ? `<img src="${logoUrl}" alt="Agente IA Compostaje CEBAS Kids">` : ''}
+        <div class="text">
+          <div class="title">Agente IA Compostaje CEBAS Kids</div>
+          <p class="desc">Un rincón mágico del CEBAS-CSIC donde una Inteligencia Artificial te enseña a compostar como en un cuento.</p>
+        </div>
       </div>
       <div class="chips" id="chips">
         <button class="chip" data-q="¿Qué cositas puedo echar en mi compostera mágica?">¿Qué cositas puedo echar en mi compostera mágica?</button>
