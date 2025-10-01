@@ -193,19 +193,13 @@ add_shortcode('compostaje_gpt', function() {
   .chip:active{ transform: translateY(1px); }
   .chip[disabled]{ opacity:.5; cursor:not-allowed; }
   .msgs{ flex:1; display:flex; flex-direction:column; background:#fff; overflow:hidden; }
-  .bot-stage{ position:relative; flex:none; height:280px; border-bottom:1px solid #f3d1dc; background:linear-gradient(180deg,#ffeef6 0%,#fff9d7 100%); display:flex; align-items:center; justify-content:center; padding:12px 18px 20px; }
+  .bot-stage{ position:relative; flex:1; min-height:0; border-bottom:1px solid #f3d1dc; background:linear-gradient(180deg,#ffeef6 0%,#fff9d7 100%); display:flex; align-items:center; justify-content:center; padding:12px 18px 20px; }
   .bot-stage::before{ content:''; position:absolute; inset:14px 18px 60px; background:rgba(255,255,255,0.7); border-radius:26px; box-shadow:0 12px 24px rgba(255,107,107,0.25); z-index:0; transition:transform .6s ease, box-shadow .6s ease; }
   .bot-stage.is-speaking::before{ transform:scale(1.02); box-shadow:0 18px 34px rgba(255,107,107,0.45); }
   .bot-stage.is-saying::before{ box-shadow:0 16px 30px rgba(255,211,59,0.45); }
   canvas.bot-canvas{ position:relative; z-index:1; width:100%; height:100%; display:block; }
   .bot-subtitle{ position:absolute; left:50%; bottom:20px; transform:translate(-50%,40px); background:#fffbe8; border:2px solid #ffd166; border-radius:18px; padding:10px 16px; font-size:clamp(16px,2.5vw,20px); color:#ff6b6b; font-weight:600; box-shadow:0 6px 16px rgba(0,0,0,0.12); max-width:80%; text-align:center; opacity:0; pointer-events:none; z-index:2; transition:opacity .35s ease, transform .35s ease; }
   .bot-subtitle.show{ opacity:1; transform:translate(-50%,0); }
-  .msg-log{ flex:1; overflow-y:auto; padding:20px 24px; position:relative; z-index:1; }
-  .row{ display:flex; margin:6px 0; }
-  .row.user{ justify-content:flex-end; }
-  .bubble{ max-width:90%; padding:16px 18px; border-radius:20px; line-height:1.6; white-space:pre-wrap; word-wrap:break-word; font-size:clamp(18px,2.5vw,24px); }
-  .row.user .bubble{ background:var(--us); border:1px solid var(--us-b); }
-  .row.ai .bubble{ background:var(--ai); border:1px solid var(--ai-b); }
   .input{ display:flex; gap:12px; padding:16px 20px; border-top:1px solid var(--bd); background:#ffffff; position:sticky; bottom:0; left:0; right:0; }
   .field{ flex:1; padding:16px 20px; border:1px solid #d1d5db; border-radius:16px; font-size:20px; outline:none; background:#fff; color:#0f172a; }
   .field::placeholder{ color:#9aa3ae; }
@@ -221,10 +215,6 @@ add_shortcode('compostaje_gpt', function() {
     .mic.active{ background:#dc2626; }
     .mic svg{ width:28px; height:28px; display:block; fill:currentColor; filter: drop-shadow(0 1px 0 rgba(0,0,0,.45)); }
     .mic[disabled]{ opacity:.6; cursor:not-allowed; }
-    .typing{ display:inline-flex; align-items:center; gap:4px; }
-  .dot{ width:6px; height:6px; border-radius:50%; background:#606770; opacity:.4; animation:blink 1.2s infinite; }
-  .dot:nth-child(2){ animation-delay:.2s; } .dot:nth-child(3){ animation-delay:.4s; }
-  @keyframes blink{ 0%,80%,100%{opacity:.2} 40%{opacity:1} }
   @media (max-width:560px){
     .chips{ justify-content:flex-start; padding:10px 8px; }
     .bot-stage{ height:230px; padding:8px 12px 16px; }
@@ -270,7 +260,6 @@ add_shortcode('compostaje_gpt', function() {
           <canvas class="bot-canvas" id="botCanvas"></canvas>
           <div class="bot-subtitle" id="botSubtitle"></div>
         </div>
-        <div class="msg-log" id="msgLog"></div>
       </div>
       <div class="input">
         <input class="field" id="field" type="text" placeholder="Escribe aquí tu pregunta compostera..." autocomplete="off">
@@ -300,31 +289,30 @@ add_shortcode('compostaje_gpt', function() {
   }
 
   // JS logic isolated
-  const logEl = root.getElementById('msgLog');
   const stageEl = root.getElementById('botStage');
   const canvas = root.getElementById('botCanvas');
   const subtitleEl = root.getElementById('botSubtitle');
   const fieldEl = root.getElementById('field');
-    const sendBtn = root.getElementById('send');
-    const micBtn  = root.getElementById('mic');
-    const chips   = root.getElementById('chips');
-    let sending = false;
-    let recognition = null;
-    let selectedVoice = null;
-    let robotSpeaking = false;
-    let subtitleTimer = 0;
-    let fallbackSpeechTimeout = null;
-    let fallbackSubtitleTimeout = null;
+  const sendBtn = root.getElementById('send');
+  const micBtn  = root.getElementById('mic');
+  const chips   = root.getElementById('chips');
+  let sending = false;
+  let recognition = null;
+  let selectedVoice = null;
+  let robotSpeaking = false;
+  let subtitleTimer = 0;
+  let fallbackSpeechTimeout = null;
+  let fallbackSubtitleTimeout = null;
 
-    const ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
-    const stageSize = { width: 0, height: 0 };
-    const crumbs = ctx ? Array.from({length:7}, () => ({ angle: Math.random()*Math.PI*2, radius: 0.28 + Math.random()*0.35, size: 6 + Math.random()*5, color: Math.random() > 0.5 ? '#8ed16f' : '#b47b36' })) : [];
-    const sparks = ctx ? Array.from({length:6}, () => ({ angle: Math.random()*Math.PI*2, distance: 0.65 + Math.random()*0.2, speed: 0.005 + Math.random()*0.01, size: 6 + Math.random()*3, color: Math.random() > 0.5 ? '#ffadad' : '#9bf6ff' })) : [];
-    let blinkTimer = 150;
-    let blinkTarget = 0;
-    let blinkValue = 0;
-    let mouthValue = 0.2;
-    let floatPhase = 0;
+  const ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
+  const stageSize = { width: 0, height: 0 };
+  const crumbs = ctx ? Array.from({length:7}, () => ({ angle: Math.random()*Math.PI*2, radius: 0.28 + Math.random()*0.35, size: 6 + Math.random()*5, color: Math.random() > 0.5 ? '#8ed16f' : '#b47b36' })) : [];
+  const sparks = ctx ? Array.from({length:6}, () => ({ angle: Math.random()*Math.PI*2, distance: 0.65 + Math.random()*0.2, speed: 0.005 + Math.random()*0.01, size: 6 + Math.random()*3, color: Math.random() > 0.5 ? '#ffadad' : '#9bf6ff' })) : [];
+  let blinkTimer = 150;
+  let blinkTarget = 0;
+  let blinkValue = 0;
+  let mouthValue = 0.2;
+  let floatPhase = 0;
 
     function updateStageStateFallback(){
       if (ctx) return;
@@ -432,18 +420,25 @@ add_shortcode('compostaje_gpt', function() {
           requestAnimationFrame(loop);
           return;
         }
-        floatPhase += 1;
-        blinkTimer--;
-        if (blinkTimer <= 0){
-          blinkTarget = 1;
-          blinkTimer = 160 + Math.random()*120;
+        if (robotSpeaking){
+          floatPhase += 1;
+          blinkTimer--;
+          if (blinkTimer <= 0){
+            blinkTarget = 1;
+            blinkTimer = 160 + Math.random()*120;
+          }
+        } else {
+          blinkTarget = 0;
+          if (blinkTimer < 160){
+            blinkTimer = 160;
+          }
         }
         blinkValue += (blinkTarget - blinkValue) * 0.2;
-        if (blinkTarget === 1 && blinkValue > 0.9){
+        if (robotSpeaking && blinkTarget === 1 && blinkValue > 0.9){
           blinkTarget = 0;
         }
 
-        const mouthTarget = robotSpeaking ? 0.7 + 0.15*Math.sin(floatPhase*0.25) : 0.25 + 0.08*Math.sin(floatPhase*0.18);
+        const mouthTarget = robotSpeaking ? 0.7 + 0.15*Math.sin(floatPhase*0.25) : 0.2;
         mouthValue += (mouthTarget - mouthValue) * 0.25;
 
         if (robotSpeaking){
@@ -474,7 +469,7 @@ add_shortcode('compostaje_gpt', function() {
         ctx.strokeStyle = 'rgba(255,209,102,0.7)';
         ctx.lineWidth = 3;
         for (let i=0;i<10;i++){
-          const angle = (Math.PI*2/10)*i + floatPhase*0.02;
+          const angle = (Math.PI*2/10)*i + (robotSpeaking ? floatPhase*0.02 : 0);
           ctx.beginPath();
           ctx.moveTo(sunX + Math.cos(angle)*30, sunY + Math.sin(angle)*30);
           ctx.lineTo(sunX + Math.cos(angle)*44, sunY + Math.sin(angle)*44);
@@ -482,10 +477,10 @@ add_shortcode('compostaje_gpt', function() {
         }
 
         // clouds
-        drawCloud(w*0.72, h*0.18 + Math.sin(floatPhase*0.01)*6, 0.9);
-        drawCloud(w*0.45, h*0.12 + Math.cos(floatPhase*0.012)*4, 0.7);
+        drawCloud(w*0.72, h*0.18 + (robotSpeaking ? Math.sin(floatPhase*0.01)*6 : 0), 0.9);
+        drawCloud(w*0.45, h*0.12 + (robotSpeaking ? Math.cos(floatPhase*0.012)*4 : 0), 0.7);
 
-        const groundY = h*0.78 + Math.sin(floatPhase*0.02)*3;
+        const groundY = h*0.78 + (robotSpeaking ? Math.sin(floatPhase*0.02)*3 : 0);
         ctx.fillStyle = '#b8f5a3';
         ctx.beginPath();
         ctx.moveTo(0, groundY);
@@ -505,7 +500,7 @@ add_shortcode('compostaje_gpt', function() {
         ctx.closePath();
         ctx.fill();
 
-        const bob = Math.sin(floatPhase*0.05) * (robotSpeaking ? 10 : 6);
+        const bob = robotSpeaking ? Math.sin(floatPhase*0.05) * 10 : 0;
         const centerX = w/2;
         const baseY = groundY - 16 + bob;
         const bodyW = Math.min(220, w*0.55);
@@ -549,12 +544,13 @@ add_shortcode('compostaje_gpt', function() {
         ctx.strokeStyle = '#2f8f67';
         ctx.lineWidth = 5;
         ctx.beginPath();
+        const antennaWave = robotSpeaking ? Math.sin(floatPhase*0.09)*6 : 0;
         ctx.moveTo(centerX, lidY);
-        ctx.quadraticCurveTo(centerX, lidY-30 - Math.sin(floatPhase*0.09)*6, centerX, lidY-48 - Math.sin(floatPhase*0.09)*6);
+        ctx.quadraticCurveTo(centerX, lidY-30 - antennaWave, centerX, lidY-48 - antennaWave);
         ctx.stroke();
         ctx.fillStyle = '#ffd166';
         ctx.beginPath();
-        ctx.arc(centerX, lidY-56 - Math.sin(floatPhase*0.09)*6, 10, 0, Math.PI*2);
+        ctx.arc(centerX, lidY-56 - antennaWave, 10, 0, Math.PI*2);
         ctx.fill();
 
         // face area
@@ -585,7 +581,7 @@ add_shortcode('compostaje_gpt', function() {
         ctx.fill();
 
         ctx.fillStyle = '#1f3b4d';
-        const pupilBob = Math.sin(floatPhase*0.05)*3;
+        const pupilBob = robotSpeaking ? Math.sin(floatPhase*0.05)*3 : 0;
         ctx.beginPath();
         ctx.ellipse(centerX - eyeOffset, eyeY + pupilBob, 10, Math.max(4, eyeH*0.4), 0, 0, Math.PI*2);
         ctx.ellipse(centerX + eyeOffset, eyeY + pupilBob, 10, Math.max(4, eyeH*0.4), 0, 0, Math.PI*2);
@@ -603,7 +599,7 @@ add_shortcode('compostaje_gpt', function() {
 
         // arms
         const armY = faceY + faceH*0.78;
-        const wave = Math.sin(floatPhase*0.08) * (robotSpeaking ? 22 : 12);
+        const wave = robotSpeaking ? Math.sin(floatPhase*0.08) * 22 : 0;
         ctx.strokeStyle = '#38a3a5';
         ctx.lineCap = 'round';
         ctx.lineWidth = 12;
@@ -639,7 +635,9 @@ add_shortcode('compostaje_gpt', function() {
         ctx.ellipse(centerX, windowY, windowR-8, windowR*0.65-8, 0, 0, Math.PI*2);
         ctx.clip();
         crumbs.forEach((crumb)=>{
-          crumb.angle += 0.01 + (robotSpeaking ? 0.015 : 0.007);
+          if (robotSpeaking){
+            crumb.angle += 0.025;
+          }
           const cx = centerX + Math.cos(crumb.angle) * (windowR-22) * crumb.radius;
           const cy = windowY + Math.sin(crumb.angle) * (windowR*0.6-18) * crumb.radius;
           ctx.fillStyle = crumb.color;
@@ -651,12 +649,15 @@ add_shortcode('compostaje_gpt', function() {
 
         // sparkles / hearts
         sparks.forEach((spark, index)=>{
-          spark.angle += spark.speed * (robotSpeaking ? 1.5 : 1);
+          if (robotSpeaking){
+            spark.angle += spark.speed * 1.5;
+          }
           const radius = (windowR + 30) * spark.distance;
           const sx = centerX + Math.cos(spark.angle + index) * radius;
           const sy = windowY - 30 + Math.sin(spark.angle + index) * (radius*0.4);
           ctx.save();
-          ctx.translate(sx, sy - Math.sin(floatPhase*0.03 + index)*6);
+          const sparkleLift = robotSpeaking ? Math.sin(floatPhase*0.03 + index)*6 : 0;
+          ctx.translate(sx, sy - sparkleLift);
           const size = spark.size + (robotSpeaking ? 3 : 0);
           ctx.fillStyle = spark.color;
           ctx.beginPath();
@@ -690,103 +691,69 @@ add_shortcode('compostaje_gpt', function() {
       window.speechSynthesis.onvoiceschanged = pickVoice;
     }
 
-  // History
-  let history = [];
-  try { const saved = localStorage.getItem('ckMessages'); if(saved) history = JSON.parse(saved); } catch(e){}
-  if (history.length) { history.forEach(m => render(m.role, m.content)); scroll(); }
-  else {
-    typingOn();
-    setTimeout(function(){
-      typingOff();
-      const welcome = '¡Hola, peque aventurerx del compost! Soy tu amigue del CEBAS-CSIC. Juntxs haremos magia con las cáscaras y las hojas para alimentar a las plantas. ¿Qué te gustaría saber?';
-      history.push({role:'assistant',content:welcome});
-      render('ai', welcome, false);
-      persist();
-      scroll();
-    },2000);
+  const history = [];
+  const addHistory = (role, content) => {
+    history.push({role, content});
+    if (history.length > 16) {
+      history.splice(0, history.length - 16);
+    }
+  };
+
+  function setSending(state){
+    sending = state;
+    sendBtn.disabled = state;
+    fieldEl.disabled = state;
+    micBtn.disabled = state ? true : !recognition;
+    Array.from(chips.children).forEach(b=>b.disabled = state);
   }
 
-  function persist(){ try{ localStorage.setItem('ckMessages', JSON.stringify(history)); } catch(e){} }
-    function scroll(){ logEl.scrollTop = logEl.scrollHeight; }
-    function setSending(state){ sending = state; sendBtn.disabled = state; Array.from(chips.children).forEach(b=>b.disabled=state); }
-    function typingOn(){ render('ai','',true); scroll(); }
-    function typingOff(){ Array.from(logEl.querySelectorAll('[data-typing="1"]')).forEach(n=>n.remove()); }
-
-
-    function typeText(el, text){
-      let i = 0;
-      const speed = 27;
-      (function add(){
-        el.textContent += text.charAt(i);
-        i++; scroll();
-        if(i < text.length){ setTimeout(add, speed); }
-      })();
+  function speakText(text){
+    const clean = text
+      .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')
+      .replace(/[\*#_~`>\[\]\(\){}]/g, '')
+      .replace(/<[^>]*>/g, '');
+    const preview = clean.replace(/\s+/g, ' ').trim();
+    if (preview){
+      const shown = preview.length > 160 ? preview.slice(0,157) + '…' : preview;
+      robotShowSubtitle(shown);
+    } else if (subtitleEl){
+      subtitleEl.textContent = '';
+      subtitleTimer = 0;
+      updateStageStateFallback();
     }
 
-    function speakAndType(el, text){
-      const clean = text
-        .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')
-        .replace(/[\*#_~`>\[\]\(\){}]/g, '')
-        .replace(/<[^>]*>/g, '');
-      const preview = clean.replace(/\s+/g, ' ').trim();
-      if (preview){
-        const shown = preview.length > 160 ? preview.slice(0,157) + '…' : preview;
-        robotShowSubtitle(shown);
-      }
-
-      if ('speechSynthesis' in window){
-        robotStopSpeaking();
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance((clean || text || '').trim());
-        utterance.lang = 'es-ES';
-        utterance.pitch = 1.1;
-        utterance.rate  = 1;
-        if (selectedVoice) utterance.voice = selectedVoice;
-        utterance.onstart = () => { robotStartSpeaking(); };
-        utterance.onend = () => { robotStopSpeaking(); };
-        utterance.oncancel = () => { robotStopSpeaking(); };
-        utterance.onpause = () => { robotStopSpeaking(); };
-        utterance.onresume = () => { robotStartSpeaking(); };
-        try {
-          window.speechSynthesis.speak(utterance);
-        } catch(e){
-          if (preview){
-            robotStopSpeaking();
-            robotSimulateSpeech(Math.min(7000, Math.max(1800, preview.length * 55)));
-          }
+    if ('speechSynthesis' in window){
+      robotStopSpeaking();
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance((clean || text || '').trim());
+      utterance.lang = 'es-ES';
+      utterance.pitch = 1.1;
+      utterance.rate  = 1;
+      if (selectedVoice) utterance.voice = selectedVoice;
+      utterance.onstart = () => { robotStartSpeaking(); };
+      utterance.onend = () => { robotStopSpeaking(); };
+      utterance.oncancel = () => { robotStopSpeaking(); };
+      utterance.onpause = () => { robotStopSpeaking(); };
+      utterance.onresume = () => { robotStartSpeaking(); };
+      try {
+        window.speechSynthesis.speak(utterance);
+      } catch(e){
+        if (preview){
+          robotStopSpeaking();
+          robotSimulateSpeech(Math.min(7000, Math.max(1800, preview.length * 55)));
         }
-      } else if (preview){
-        robotStopSpeaking();
-        robotSimulateSpeech(Math.min(7000, Math.max(1800, preview.length * 55)));
       }
-
-      typeText(el, text);
+    } else if (preview){
+      robotStopSpeaking();
+      robotSimulateSpeech(Math.min(7000, Math.max(1800, preview.length * 55)));
     }
+  }
 
-
-    function render(role, text, typing=false){
-      const row = document.createElement('div');
-      row.className = 'row ' + (role==='user'?'user':'ai');
-      const bubble = document.createElement('div');
-      bubble.className = 'bubble';
-      if (typing){
-        row.dataset.typing = '1';
-        const t = document.createElement('div');
-        t.className = 'typing';
-        t.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
-        bubble.appendChild(t);
-      } else {
-        const txt = document.createElement('div');
-        bubble.appendChild(txt);
-          if(role === 'ai'){
-            speakAndType(txt, text);
-          } else {
-            txt.textContent = text;
-          }
-      }
-      row.appendChild(bubble);
-      logEl.appendChild(row);
-    }
+  const welcomeMessage = '¡Hola, peque aventurerx del compost! Soy tu amigue del CEBAS-CSIC. Juntxs haremos magia con las cáscaras y las hojas para alimentar a las plantas. ¿Qué te gustaría saber?';
+  setTimeout(()=>{
+    addHistory('assistant', welcomeMessage);
+    speakText(welcomeMessage);
+  }, 2000);
 
   async function send(txt){
     if(!txt || sending) return;
@@ -794,10 +761,9 @@ add_shortcode('compostaje_gpt', function() {
     if (typeof window.gtag === 'function') {
       window.gtag('event', 'ck_chat_message', { event_category: 'chatbot' });
     }
-    history.push({role:'user',content:txt});
-    render('user', txt);
+    addHistory('user', txt);
     fieldEl.value='';
-    typingOn();
+    robotStopSpeaking();
     try{
       const res = await fetch(ajaxUrl, {
         method:'POST',
@@ -806,24 +772,22 @@ add_shortcode('compostaje_gpt', function() {
         body: JSON.stringify({messages: history})
       });
       const data = await res.json();
-      typingOff();
       const reply = (data && data.reply) ? data.reply : (data && data.error ? data.error : 'No se pudo obtener respuesta.');
-      history.push({role:'assistant',content:reply});
-      render('ai', reply);
+      addHistory('assistant', reply);
+      speakText(reply);
       if (typeof window.gtag === 'function') {
         window.gtag('event', 'ck_chat_reply', { event_category: 'chatbot' });
       }
     }catch(err){
-      typingOff();
       const msg = 'Ups, parece que las lombrices están dormidas. ¡Inténtalo otra vez!';
-      history.push({role:'assistant',content:msg});
-      render('ai', msg);
+      addHistory('assistant', msg);
+      speakText(msg);
       console.error(err);
       if (typeof window.gtag === 'function') {
         window.gtag('event', 'ck_chat_error', { event_category: 'chatbot' });
       }
     }finally{
-      persist(); scroll(); setSending(false);
+      setSending(false);
     }
   }
 
