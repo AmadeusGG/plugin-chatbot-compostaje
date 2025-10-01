@@ -305,6 +305,17 @@ add_shortcode('compostaje_gpt', function() {
     drift: 0.0008 + Math.random()*0.0012,
     glow: 0.4 + Math.random()*0.4
   })) : [];
+  const veggieBeds = ctx ? [
+    { pos: 0.18, color: '#f9c74f', leaf: '#70e000', type: 'carrot' },
+    { pos: 0.38, color: '#90be6d', leaf: '#4cc9f0', type: 'lettuce' },
+    { pos: 0.58, color: '#f9844a', leaf: '#43aa8b', type: 'pumpkin' },
+    { pos: 0.78, color: '#ffafcc', leaf: '#4895ef', type: 'beet' }
+  ] : [];
+  const sproutOffsets = ctx ? Array.from({length: 18}, (_,i) => ({
+    x: (i/18) + (Math.random()*0.05 - 0.02),
+    phase: Math.random()*Math.PI*2,
+    scale: 0.6 + Math.random()*0.5
+  })) : [];
   let compostSpawnTimer = 0;
   let tossHighlight = 0;
   let wormPhase = 0;
@@ -637,24 +648,175 @@ add_shortcode('compostaje_gpt', function() {
         });
 
         const groundY = h*0.78 + (robotSpeaking ? Math.sin(floatPhase*0.02)*3 : 0);
-        ctx.fillStyle = '#b8f5a3';
+        const horizonY = h*0.52 + (robotSpeaking ? Math.sin(floatPhase*0.013)*4 : 0);
+        const soilTop = groundY - 32;
+
+        // meadow background
+        ctx.fillStyle = '#d8f3dc';
         ctx.beginPath();
-        ctx.moveTo(0, groundY);
-        ctx.quadraticCurveTo(w*0.25, groundY-24, w*0.5, groundY-10);
-        ctx.quadraticCurveTo(w*0.8, groundY+8, w, groundY-18);
+        ctx.moveTo(0, horizonY + 10);
+        ctx.quadraticCurveTo(w*0.2, horizonY-18, w*0.44, horizonY-8);
+        ctx.quadraticCurveTo(w*0.72, horizonY+18, w, horizonY-6);
+        ctx.lineTo(w, groundY);
+        ctx.lineTo(0, groundY);
+        ctx.closePath();
+        ctx.fill();
+
+        // distant veggie silhouettes
+        ctx.save();
+        ctx.translate(0, horizonY);
+        ctx.fillStyle = 'rgba(112, 168, 90, 0.65)';
+        for (let i=0; i<12; i++){
+          const hillX = (w/11)*i + (robotSpeaking ? Math.sin(floatPhase*0.01 + i)*6 : 0);
+          const hillH = 32 + Math.sin(i*1.7)*16;
+          ctx.beginPath();
+          ctx.moveTo(hillX-26, 10);
+          ctx.bezierCurveTo(hillX-18, -hillH*0.6, hillX+18, -hillH*0.6, hillX+26, 10);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+
+        // soil layer with organic texture
+        ctx.fillStyle = '#8d5524';
+        ctx.beginPath();
+        ctx.moveTo(0, soilTop);
+        ctx.bezierCurveTo(w*0.22, soilTop+18, w*0.42, soilTop-6, w*0.6, soilTop+12);
+        ctx.bezierCurveTo(w*0.78, soilTop+26, w*0.92, soilTop-4, w, soilTop+16);
         ctx.lineTo(w, h);
         ctx.lineTo(0, h);
         ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = '#7bd7f0';
+        ctx.fillStyle = '#a47148';
+        for (let i=0; i<60; i++){
+          const pebbleX = Math.random()*w;
+          const pebbleY = soilTop + Math.random()*(h-soilTop-20);
+          const pebbleSize = 3 + Math.random()*4;
+          ctx.globalAlpha = 0.35;
+          ctx.beginPath();
+          ctx.ellipse(pebbleX, pebbleY, pebbleSize, pebbleSize*0.6, Math.random()*Math.PI, 0, Math.PI*2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        // compost rows
+        ctx.fillStyle = '#4caf50';
         ctx.beginPath();
-        ctx.moveTo(0, groundY);
-        ctx.bezierCurveTo(w*0.2, groundY-18, w*0.35, groundY-6, w*0.5, groundY-12);
-        ctx.bezierCurveTo(w*0.7, groundY-24, w*0.85, groundY-6, w, groundY-20);
-        ctx.lineTo(w, groundY);
+        ctx.moveTo(0, soilTop);
+        ctx.bezierCurveTo(w*0.18, soilTop-12, w*0.36, soilTop-8, w*0.52, soilTop-10);
+        ctx.bezierCurveTo(w*0.72, soilTop-14, w*0.88, soilTop-6, w, soilTop-12);
+        ctx.lineTo(w, soilTop+12);
+        ctx.bezierCurveTo(w*0.82, soilTop+18, w*0.64, soilTop+8, w*0.48, soilTop+14);
+        ctx.bezierCurveTo(w*0.3, soilTop+18, w*0.16, soilTop+12, 0, soilTop+16);
         ctx.closePath();
         ctx.fill();
+
+        // sprouting mini plants
+        ctx.save();
+        ctx.translate(0, soilTop+4);
+        sproutOffsets.forEach((sprout, idx)=>{
+          const sx = (sprout.x % 1) * w;
+          const sway = Math.sin(sprout.phase + floatPhase*0.02 + idx)*4;
+          ctx.strokeStyle = '#38761d';
+          ctx.lineWidth = 2 * sprout.scale;
+          ctx.beginPath();
+          ctx.moveTo(sx, 12);
+          ctx.quadraticCurveTo(sx+sway*0.2, 2, sx+sway, -8);
+          ctx.stroke();
+          ctx.fillStyle = '#66bb6a';
+          ctx.beginPath();
+          ctx.ellipse(sx-4, 0, 6*sprout.scale, 3*sprout.scale, -0.6, 0, Math.PI*2);
+          ctx.ellipse(sx+4, 0, 6*sprout.scale, 3*sprout.scale, 0.6, 0, Math.PI*2);
+          ctx.fill();
+        });
+        ctx.restore();
+
+        // vegetable beds with crops
+        veggieBeds.forEach((bed, idx)=>{
+          const bedX = w * bed.pos;
+          const bedY = soilTop + 6 + Math.sin(floatPhase*0.02 + idx)*3;
+          const bedW = w*0.16;
+          const bedH = 22;
+          ctx.fillStyle = 'rgba(51, 102, 51, 0.18)';
+          drawRoundedRect(bedX - bedW/2, bedY-6, bedW, bedH, 14);
+          ctx.fill();
+
+          const plantCount = 4;
+          for (let i=0; i<plantCount; i++){
+            const offset = (i/(plantCount-1) - 0.5) * (bedW*0.7);
+            const plantX = bedX + offset;
+            const bounce = Math.sin(floatPhase*0.03 + idx + i)*2;
+            ctx.save();
+            ctx.translate(plantX, bedY + bounce);
+            ctx.strokeStyle = '#2d6a4f';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, 10);
+            ctx.quadraticCurveTo(2, -4, 0, -18);
+            ctx.stroke();
+            switch(bed.type){
+              case 'carrot':
+                ctx.fillStyle = bed.color;
+                ctx.beginPath();
+                ctx.moveTo(0, -6);
+                ctx.lineTo(-6, 12);
+                ctx.lineTo(6, 12);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = bed.leaf;
+                ctx.beginPath();
+                ctx.ellipse(-6, -18, 8, 14, -0.5, 0, Math.PI*2);
+                ctx.ellipse(6, -18, 8, 14, 0.5, 0, Math.PI*2);
+                ctx.fill();
+                break;
+              case 'lettuce':
+                ctx.fillStyle = bed.leaf;
+                for (let l=0; l<3; l++){
+                  ctx.beginPath();
+                  ctx.ellipse(0, -12-l*4, 14-l*2, 10-l*2, 0, 0, Math.PI*2);
+                  ctx.fill();
+                }
+                ctx.fillStyle = bed.color;
+                ctx.beginPath();
+                ctx.ellipse(0, -14, 10, 8, 0, 0, Math.PI*2);
+                ctx.fill();
+                break;
+              case 'pumpkin':
+                ctx.fillStyle = bed.color;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 16, 12, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = '#f8961e';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 12, 12, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = bed.leaf;
+                ctx.beginPath();
+                ctx.moveTo(0, -10);
+                ctx.quadraticCurveTo(6, -18, 10, -10);
+                ctx.quadraticCurveTo(4, -4, 0, -6);
+                ctx.quadraticCurveTo(-4, -4, -10, -10);
+                ctx.quadraticCurveTo(-6, -18, 0, -10);
+                ctx.fill();
+                break;
+              case 'beet':
+              default:
+                ctx.fillStyle = bed.color;
+                ctx.beginPath();
+                ctx.ellipse(0, 6, 12, 14, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.fillStyle = bed.leaf;
+                ctx.beginPath();
+                ctx.moveTo(0, -6);
+                ctx.bezierCurveTo(10, -26, 12, -6, 0, -2);
+                ctx.bezierCurveTo(-12, -6, -10, -26, 0, -6);
+                ctx.fill();
+                break;
+            }
+            ctx.restore();
+          }
+        });
 
         // friendly worm helper
         ctx.save();
