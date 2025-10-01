@@ -246,10 +246,8 @@ add_shortcode('compostaje_gpt', function() {
         </div>
       </div>
       <div class="chips" id="chips">
-        <button class="chip" data-q="¿Qué cositas puedo echar en mi compostera mágica?">¿Qué cositas puedo echar en mi compostera mágica?</button>
-        <button class="chip" data-q="¿Por qué el compost hace feliz al huerto?">¿Por qué el compost hace feliz al huerto?</button>
-        <button class="chip" data-q="¿Cuánto tarda la poción del compost?">¿Cuánto tarda la poción del compost?</button>
-        <button class="chip" data-q="¿Qué bichitos ayudan en el compost?">¿Qué bichitos ayudan en el compost?</button>
+        <button class="chip" id="storyChip" type="button">Cuéntame el cuento mágico del compost</button>
+        <button class="chip" id="voiceChip" type="button">Pregúntame sobre el compost</button>
       </div>
       <div class="msgs" id="msgs">
         <div class="bot-stage" id="botStage">
@@ -290,6 +288,8 @@ add_shortcode('compostaje_gpt', function() {
   const sendBtn = root.getElementById('send');
   const micBtn  = root.getElementById('mic');
   const chips   = root.getElementById('chips');
+  const storyChip = root.getElementById('storyChip');
+  const voiceChip = root.getElementById('voiceChip');
   let sending = false;
   let recognition = null;
   let selectedVoice = null;
@@ -643,6 +643,8 @@ add_shortcode('compostaje_gpt', function() {
       window.speechSynthesis.onvoiceschanged = pickVoice;
     }
 
+  const storyText = 'Había una vez un montoncito de hojas llamado Lomi que soñaba con ser comida para flores. Cada tarde, niñas y niños traían cáscaras de plátano, té y pedacitos de cartón. Lomi los abrazaba con calorcito y los bichitos bailaban alrededor, triturando cada regalo. La lluvia les cantaba suavemente y el sol les daba cosquillas. En unas semanas, Lomi se transformó en un abono brillante que despertó a un jardín entero. ¡Y todos celebraron oliendo a tierra feliz!';
+
   const history = [];
   const addHistory = (role, content) => {
     history.push({role, content});
@@ -657,6 +659,9 @@ add_shortcode('compostaje_gpt', function() {
     fieldEl.disabled = state;
     micBtn.disabled = state ? true : !recognition;
     Array.from(chips.children).forEach(b=>b.disabled = state);
+    if (!state && voiceChip && !recognition) {
+      voiceChip.disabled = true;
+    }
   }
 
   function speakText(text){
@@ -692,12 +697,6 @@ add_shortcode('compostaje_gpt', function() {
       robotSimulateSpeech(Math.min(7000, Math.max(1800, preview.length * 55)));
     }
   }
-
-  const welcomeMessage = '¡Hola, peque aventurerx del compost! Soy tu amigue del CEBAS-CSIC. Juntxs haremos magia con las cáscaras y las hojas para alimentar a las plantas. ¿Qué te gustaría saber?';
-  setTimeout(()=>{
-    addHistory('assistant', welcomeMessage);
-    speakText(welcomeMessage);
-  }, 2000);
 
   async function send(txt){
     if(!txt || sending) return;
@@ -744,19 +743,33 @@ add_shortcode('compostaje_gpt', function() {
       const transcript = e.results[0][0].transcript.trim();
       if (transcript) send(transcript);
     };
-    recognition.onstart = () => { micBtn.classList.add('active'); };
-    recognition.onend = () => { micBtn.classList.remove('active'); };
+    recognition.onstart = () => {
+      micBtn.classList.add('active');
+      if (voiceChip) voiceChip.classList.add('active');
+    };
+    recognition.onend = () => {
+      micBtn.classList.remove('active');
+      if (voiceChip) voiceChip.classList.remove('active');
+    };
+    if (voiceChip) voiceChip.disabled = false;
   } else {
     micBtn.disabled = true;
+    if (voiceChip) voiceChip.disabled = true;
   }
 
   sendBtn.addEventListener('click', ()=> send(fieldEl.value.trim()));
   micBtn.addEventListener('click', ()=>{ if(recognition) recognition.start(); });
+  if (voiceChip) {
+    voiceChip.addEventListener('click', ()=>{ if(recognition) recognition.start(); });
+  }
+  if (storyChip) {
+    storyChip.addEventListener('click', ()=>{
+      if (sending) return;
+      addHistory('assistant', storyText);
+      speakText(storyText);
+    });
+  }
   fieldEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(fieldEl.value.trim()); } });
-  chips.addEventListener('click', (e)=>{
-    const b = e.target.closest('.chip'); if(!b) return;
-    const q = b.getAttribute('data-q'); if(q) send(q);
-  });
 
   // Ajuste de altura ya manejado con flexbox
 })();
