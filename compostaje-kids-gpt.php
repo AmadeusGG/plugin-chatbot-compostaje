@@ -181,14 +181,14 @@ add_shortcode('compostaje_gpt', function() {
     --ai:#fff9c4; --ai-b:#ffe58f; --us:#b3e5fc; --us-b:#81d4fa;
     --chip:#e1f5fe; --chip-b:#b3e5fc; --chip-text:#0f172a;
   }
-  .wrap{ position:absolute; inset:0; display:flex; flex-direction:column; width:100%; height:100%; margin:0; border:none; border-radius:0; overflow:hidden; background:#fff; box-shadow:none; opacity:0.9; }
-  .header{ position:relative; padding:18px 20px; background:var(--mut); border-bottom:1px solid var(--bd); display:flex; align-items:center; gap:20px; }
+  .wrap{ position:absolute; inset:0; display:flex; flex-direction:column; width:100%; height:100%; margin:0; border:none; border-radius:0; overflow:hidden; background:#fff; box-shadow:none; opacity:1; }
+  .header{ position:relative; padding:5px 5px; background:var(--mut);  display:flex; align-items:center; gap:20px; }
   .header img{ max-height:125px; display:block; flex-shrink:0; }
   .header .text{ flex:1; }
   .title{ margin:4px 0 2px; font-size: clamp(26px,5vw,40px); font-weight:800; }
   .desc{ margin:0; font-size: clamp(18px,3vw,26px); color:#4b5563; }
-  .chips{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; padding:12px; background:var(--mut2); border-bottom:1px solid #eef2f7; overflow-x:auto; scroll-snap-type:x mandatory; }
-  .chip{ scroll-snap-align:start; padding:10px 16px; border-radius:999px; border:1px solid var(--chip-b); background:var(--chip); cursor:pointer; font-size:clamp(18px,2.8vw,24px); color:var(--chip-text); white-space:nowrap; box-shadow:0 2px 0 rgba(0,0,0,.02); transition: background .15s,border-color .15s,transform .08s }
+  .chips{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; background:var(--mut); padding:5px; border-bottom:1px solid #eef2f7; overflow-x:auto; scroll-snap-type:x mandatory; }
+  .chip{ scroll-snap-align:start; padding:10px 16px; border-radius:999px;background:var(--mut); border:1px solid var(--chip-b); background:var(--chip); cursor:pointer; font-size:clamp(18px,2.8vw,24px); color:var(--chip-text); white-space:nowrap; box-shadow:0 2px 0 rgba(0,0,0,.02); transition: background .15s,border-color .15s,transform .08s }
   .chip:hover{ background:#eef2ff; border-color:#c7d2fe; }
   .chip:active{ transform: translateY(1px); }
   .chip[disabled]{ opacity:.5; cursor:not-allowed; }
@@ -240,7 +240,7 @@ add_shortcode('compostaje_gpt', function() {
     <div class="wrap">
       <div class="header">
         ${logoUrl ? `<img src="${logoUrl}" alt="Agente IA Compostaje CEBAS Kids">` : ''}
-        <div class="text">
+        <div class="text" style="text-align:center;">
           <div class="title">Agente IA Compostaje CEBAS Kids</div>
           <p class="desc">Un rincón mágico del CEBAS-CSIC donde una Inteligencia Artificial te enseña a compostar como en un cuento.</p>
         </div>
