@@ -254,17 +254,6 @@ add_shortcode('compostaje_gpt', function() {
           <canvas class="bot-canvas" id="botCanvas"></canvas>
         </div>
       </div>
-      <div class="input">
-        <input class="field" id="field" type="text" placeholder="Escribe aquí tu pregunta compostera..." autocomplete="off">
-        <button class="mic" id="mic" aria-label="Hablar" title="Hablar">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 14a3 3 0 003-3V5a3 3 0 10-6 0v6a3 3 0 003 3zm5-3a5 5 0 01-10 0H5a7 7 0 0014 0h-2zM11 19h2v3h-2z"></path></svg>
-          <span style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden">Hablar</span>
-        </button>
-        <button class="send" id="send" aria-label="Enviar" title="Enviar">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 11.1c-.9-.4-.9-1.7 0-2.1L20.6 1.8c.9-.4 1.8.5 1.4 1.4l-7.2 18.1c-.3.8-1.5.7-1.8-.1l-2.2-5.4c-.1-.3-.4-.5-.7-.6l-7.6-3.1zM9.2 12.5l3.3 8.1 6.1-15.5-9.4 3.8 3.6 1.5c.5.2.6.9.2 1.2l-3.8 2.9z"></path></svg>
-          <span style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden">Enviar</span>
-        </button>
-      </div>
     </div>
   `;
 
@@ -1064,9 +1053,9 @@ add_shortcode('compostaje_gpt', function() {
 
   function setSending(state){
     sending = state;
-    sendBtn.disabled = state;
-    fieldEl.disabled = state;
-    micBtn.disabled = state ? true : !recognition;
+    if (sendBtn) sendBtn.disabled = state;
+    if (fieldEl) fieldEl.disabled = state;
+    if (micBtn) micBtn.disabled = state ? true : !recognition;
     Array.from(chips.children).forEach(b=>b.disabled = state);
     if (!state && voiceChip && !recognition) {
       voiceChip.disabled = true;
@@ -1111,7 +1100,7 @@ add_shortcode('compostaje_gpt', function() {
       window.gtag('event', 'ck_chat_message', { event_category: 'chatbot' });
     }
     addHistory('user', txt);
-    fieldEl.value='';
+    if (fieldEl) fieldEl.value='';
     robotStopSpeaking();
     try{
       const res = await fetch(ajaxUrl, {
@@ -1152,21 +1141,25 @@ add_shortcode('compostaje_gpt', function() {
       if (transcript) send(transcript);
     };
     recognition.onstart = () => {
-      micBtn.classList.add('active');
+      if (micBtn) micBtn.classList.add('active');
       if (voiceChip) voiceChip.classList.add('active');
     };
     recognition.onend = () => {
-      micBtn.classList.remove('active');
+      if (micBtn) micBtn.classList.remove('active');
       if (voiceChip) voiceChip.classList.remove('active');
     };
     if (voiceChip) voiceChip.disabled = false;
   } else {
-    micBtn.disabled = true;
+    if (micBtn) micBtn.disabled = true;
     if (voiceChip) voiceChip.disabled = true;
   }
 
-  sendBtn.addEventListener('click', ()=> send(fieldEl.value.trim()));
-  micBtn.addEventListener('click', ()=>{ if(recognition) recognition.start(); });
+  if (sendBtn) {
+    sendBtn.addEventListener('click', ()=> send(fieldEl ? fieldEl.value.trim() : ''));
+  }
+  if (micBtn) {
+    micBtn.addEventListener('click', ()=>{ if(recognition) recognition.start(); });
+  }
   if (voiceChip) {
     voiceChip.addEventListener('click', ()=>{ if(recognition) recognition.start(); });
   }
@@ -1177,7 +1170,9 @@ add_shortcode('compostaje_gpt', function() {
       speakText(storyText);
     });
   }
-  fieldEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(fieldEl.value.trim()); } });
+  if (fieldEl) {
+    fieldEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(fieldEl.value.trim()); } });
+  }
 
   // Ajuste de altura ya manejado con flexbox
 })();
