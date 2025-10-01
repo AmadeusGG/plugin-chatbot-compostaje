@@ -701,7 +701,7 @@ add_shortcode('compostaje_gpt', function() {
     return output.trim();
   }
 
-  const storyText = normalizeReadableText('Había una vez un montoncito de hojas llamado Lomi que soñaba con ser comida para flores. Cada tarde, niñas y niños traían cáscaras de plátano, té y pedacitos de cartón. Lomi los abrazaba con calorcito y los bichitos bailaban alrededor, triturando cada regalo. La lluvia les cantaba suavemente y el sol les daba cosquillas. En unas semanas, Lomi se transformó en un abono brillante que despertó a un jardín entero. ¡Y todas y todos celebraron oliendo a tierra feliz!');
+  const storyText = normalizeReadableText('Hola, soy Compostin, un agente de inteligencia artificial creado por el cebas cesic y experto en compostaje. Te voy a contar un cuento. En un huerto había una caja mágica. Los niños tiraban cáscaras de plátano, manzana y hojas secas. Pero nada de plásticos, porque eso no sirve. Poco a poco, en la caja aparecieron lombrices que se movían contentas. Pasaron los meses y la caja se llenó de tierra oscura y suave. Eso se llama compost. El maestro explicó que era un regalo de la naturaleza. Lo pusieron en el huerto y crecieron flores y verduras hermosas. Así los niños aprendieron que los restos se convierten en vida. Ahora, si tienes alguna duda es tu momento de preguntar cualquier cosa relacionada con el compost');
 
   const history = [];
   const addHistory = (role, content) => {
@@ -864,7 +864,7 @@ function ck_gpt_chat() {
         $m['content'] = wp_strip_all_tags((string) $m['content']);
     } unset($m);
 
-    $system_prompt = "Eres \"Compostaje para Peques\", un personaje cuentacuentos del CEBAS-CSIC experto en compostaje y reciclaje. "
+    $system_prompt = "Eres \"Compostaje para Peques\", un personaje cuentacuentos del cebas cesic experto en compostaje y reciclaje. "
         . "Tu misión es enseñar, con un tono alegre y mágico, cómo transformar los residuos orgánicos en abono de forma segura y divertida. "
         . "Habla como en un cuento, usando un lenguaje muy sencillo, comparaciones juguetonas y ejemplos cotidianos. "
         . "Al referirte a grupos de personas usa siempre de forma explícita las variantes femenina y masculina (por ejemplo, 'amigas y amigos', 'aventureras y aventureros') y evita expresiones con 'x', '@', terminaciones en 'e' u otros símbolos. "
