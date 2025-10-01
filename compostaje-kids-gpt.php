@@ -196,10 +196,7 @@ add_shortcode('compostaje_gpt', function() {
   .bot-stage{ position:relative; flex:1; min-height:0; border-bottom:1px solid #f3d1dc; background:linear-gradient(180deg,#ffeef6 0%,#fff9d7 100%); display:flex; align-items:center; justify-content:center; padding:12px 18px 20px; }
   .bot-stage::before{ content:''; position:absolute; inset:14px 18px 60px; background:rgba(255,255,255,0.7); border-radius:26px; box-shadow:0 12px 24px rgba(255,107,107,0.25); z-index:0; transition:transform .6s ease, box-shadow .6s ease; }
   .bot-stage.is-speaking::before{ transform:scale(1.02); box-shadow:0 18px 34px rgba(255,107,107,0.45); }
-  .bot-stage.is-saying::before{ box-shadow:0 16px 30px rgba(255,211,59,0.45); }
   canvas.bot-canvas{ position:relative; z-index:1; width:100%; height:100%; display:block; }
-  .bot-subtitle{ position:absolute; left:50%; bottom:20px; transform:translate(-50%,40px); background:#fffbe8; border:2px solid #ffd166; border-radius:18px; padding:10px 16px; font-size:clamp(16px,2.5vw,20px); color:#ff6b6b; font-weight:600; box-shadow:0 6px 16px rgba(0,0,0,0.12); max-width:80%; text-align:center; opacity:0; pointer-events:none; z-index:2; transition:opacity .35s ease, transform .35s ease; }
-  .bot-subtitle.show{ opacity:1; transform:translate(-50%,0); }
   .input{ display:flex; gap:12px; padding:16px 20px; border-top:1px solid var(--bd); background:#ffffff; position:sticky; bottom:0; left:0; right:0; }
   .field{ flex:1; padding:16px 20px; border:1px solid #d1d5db; border-radius:16px; font-size:20px; outline:none; background:#fff; color:#0f172a; }
   .field::placeholder{ color:#9aa3ae; }
@@ -218,7 +215,6 @@ add_shortcode('compostaje_gpt', function() {
   @media (max-width:560px){
     .chips{ justify-content:flex-start; padding:10px 8px; }
     .bot-stage{ height:230px; padding:8px 12px 16px; }
-    .bot-subtitle{ bottom:16px; }
   }
   .input{ padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
   `;
@@ -258,7 +254,6 @@ add_shortcode('compostaje_gpt', function() {
       <div class="msgs" id="msgs">
         <div class="bot-stage" id="botStage">
           <canvas class="bot-canvas" id="botCanvas"></canvas>
-          <div class="bot-subtitle" id="botSubtitle"></div>
         </div>
       </div>
       <div class="input">
@@ -291,7 +286,6 @@ add_shortcode('compostaje_gpt', function() {
   // JS logic isolated
   const stageEl = root.getElementById('botStage');
   const canvas = root.getElementById('botCanvas');
-  const subtitleEl = root.getElementById('botSubtitle');
   const fieldEl = root.getElementById('field');
   const sendBtn = root.getElementById('send');
   const micBtn  = root.getElementById('mic');
@@ -300,9 +294,7 @@ add_shortcode('compostaje_gpt', function() {
   let recognition = null;
   let selectedVoice = null;
   let robotSpeaking = false;
-  let subtitleTimer = 0;
   let fallbackSpeechTimeout = null;
-  let fallbackSubtitleTimeout = null;
 
   const ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
   const stageSize = { width: 0, height: 0 };
@@ -314,57 +306,29 @@ add_shortcode('compostaje_gpt', function() {
   let mouthValue = 0.2;
   let floatPhase = 0;
 
-    function updateStageStateFallback(){
-      if (ctx) return;
-      const hasSubtitle = subtitleEl && subtitleEl.textContent.trim().length > 0;
-      const showSubtitle = (robotSpeaking || subtitleTimer > 0) && hasSubtitle;
-      stageEl.classList.toggle('is-speaking', robotSpeaking);
-      stageEl.classList.toggle('is-saying', showSubtitle);
-      if (subtitleEl){
-        subtitleEl.classList.toggle('show', showSubtitle);
-      }
-    }
+  function updateStageState(){
+    if (!stageEl) return;
+    stageEl.classList.toggle('is-speaking', robotSpeaking);
+  }
 
-    function scheduleFallbackHide(ms){
-      if (ctx) return;
-      clearTimeout(fallbackSubtitleTimeout);
-      fallbackSubtitleTimeout = setTimeout(()=>{
-        subtitleTimer = 0;
-        robotSpeaking = false;
-        updateStageStateFallback();
-      }, ms);
-    }
+  function robotStartSpeaking(){
+    clearTimeout(fallbackSpeechTimeout);
+    robotSpeaking = true;
+    updateStageState();
+  }
 
-    function robotShowSubtitle(text){
-      if (!subtitleEl) return;
-      subtitleEl.textContent = text;
-      subtitleTimer = 260;
-      updateStageStateFallback();
-      scheduleFallbackHide(3200);
-    }
+  function robotStopSpeaking(){
+    clearTimeout(fallbackSpeechTimeout);
+    robotSpeaking = false;
+    updateStageState();
+  }
 
-    function robotStartSpeaking(){
-      clearTimeout(fallbackSpeechTimeout);
-      if (!ctx) clearTimeout(fallbackSubtitleTimeout);
-      robotSpeaking = true;
-      subtitleTimer = Math.max(subtitleTimer, 260);
-      updateStageStateFallback();
-    }
+  function robotSimulateSpeech(duration){
+    robotStartSpeaking();
+    fallbackSpeechTimeout = setTimeout(()=>{ robotStopSpeaking(); }, duration);
+  }
 
-    function robotStopSpeaking(){
-      clearTimeout(fallbackSpeechTimeout);
-      if (robotSpeaking) subtitleTimer = Math.max(subtitleTimer, 120);
-      robotSpeaking = false;
-      updateStageStateFallback();
-      scheduleFallbackHide(2000);
-    }
-
-    function robotSimulateSpeech(duration){
-      robotStartSpeaking();
-      fallbackSpeechTimeout = setTimeout(()=>{ robotStopSpeaking(); }, duration);
-    }
-
-    if (ctx){
+  if (ctx){
       const drawRoundedRect = (x,y,w,h,r)=>{
         const rr = Math.min(r, h/2, w/2);
         ctx.beginPath();
@@ -441,19 +405,7 @@ add_shortcode('compostaje_gpt', function() {
         const mouthTarget = robotSpeaking ? 0.7 + 0.15*Math.sin(floatPhase*0.25) : 0.2;
         mouthValue += (mouthTarget - mouthValue) * 0.25;
 
-        if (robotSpeaking){
-          subtitleTimer = Math.max(subtitleTimer, 200);
-        } else if (subtitleTimer > 0){
-          subtitleTimer -= 1;
-        }
-
-        const hasSubtitle = subtitleEl && subtitleEl.textContent.trim().length > 0;
-        const showSubtitle = (robotSpeaking || subtitleTimer > 0) && hasSubtitle;
         stageEl.classList.toggle('is-speaking', robotSpeaking);
-        stageEl.classList.toggle('is-saying', showSubtitle);
-        if (subtitleEl){
-          subtitleEl.classList.toggle('show', showSubtitle);
-        }
 
         const w = stageSize.width;
         const h = stageSize.height;
@@ -713,14 +665,6 @@ add_shortcode('compostaje_gpt', function() {
       .replace(/[\*#_~`>\[\]\(\){}]/g, '')
       .replace(/<[^>]*>/g, '');
     const preview = clean.replace(/\s+/g, ' ').trim();
-    if (preview){
-      const shown = preview.length > 160 ? preview.slice(0,157) + '…' : preview;
-      robotShowSubtitle(shown);
-    } else if (subtitleEl){
-      subtitleEl.textContent = '';
-      subtitleTimer = 0;
-      updateStageStateFallback();
-    }
 
     if ('speechSynthesis' in window){
       robotStopSpeaking();
