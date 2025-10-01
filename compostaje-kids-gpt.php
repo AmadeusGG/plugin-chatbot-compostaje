@@ -361,6 +361,11 @@ add_shortcode('compostaje_gpt', function() {
       stageSize.width = rect.width;
       stageSize.height = rect.height;
     }
+    subtitleEl.textContent = text;
+    subtitleTimer = 260;
+    updateStageStateFallback();
+    scheduleFallbackHide(3200);
+  }
 
     resizeRobot();
     window.addEventListener('resize', resizeRobot);
