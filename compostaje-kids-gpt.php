@@ -157,7 +157,7 @@ add_shortcode('compostaje_gpt', function() {
   document.body.appendChild(overlay);
 
   const host = document.createElement('div');
-  host.style.cssText = 'position:relative;width:90vw;height:90vh;max-width:1400px;max-height:900px;';
+  host.style.cssText = 'position:relative;width:90vw;height:90vh;max-width:1600px;max-height:1000px;';
   if (window.matchMedia('(min-width:600px)').matches) {
     host.style.borderRadius = '12px';
     host.style.boxShadow = '0 8px 24px rgba(0,0,0,.12)';
