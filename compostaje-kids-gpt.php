@@ -192,7 +192,15 @@ add_shortcode('compostaje_gpt', function() {
   .chip:hover{ background:#eef2ff; border-color:#c7d2fe; }
   .chip:active{ transform: translateY(1px); }
   .chip[disabled]{ opacity:.5; cursor:not-allowed; }
-  .msgs{ flex:1; overflow-y:auto; padding:20px 24px; background:#fff; }
+  .msgs{ flex:1; display:flex; flex-direction:column; background:#fff; overflow:hidden; }
+  .bot-stage{ position:relative; flex:none; height:280px; border-bottom:1px solid #f3d1dc; background:linear-gradient(180deg,#ffeef6 0%,#fff9d7 100%); display:flex; align-items:center; justify-content:center; padding:12px 18px 20px; }
+  .bot-stage::before{ content:''; position:absolute; inset:14px 18px 60px; background:rgba(255,255,255,0.7); border-radius:26px; box-shadow:0 12px 24px rgba(255,107,107,0.25); z-index:0; transition:transform .6s ease, box-shadow .6s ease; }
+  .bot-stage.is-speaking::before{ transform:scale(1.02); box-shadow:0 18px 34px rgba(255,107,107,0.45); }
+  .bot-stage.is-saying::before{ box-shadow:0 16px 30px rgba(255,211,59,0.45); }
+  canvas.bot-canvas{ position:relative; z-index:1; width:100%; height:100%; display:block; }
+  .bot-subtitle{ position:absolute; left:50%; bottom:20px; transform:translate(-50%,40px); background:#fffbe8; border:2px solid #ffd166; border-radius:18px; padding:10px 16px; font-size:clamp(16px,2.5vw,20px); color:#ff6b6b; font-weight:600; box-shadow:0 6px 16px rgba(0,0,0,0.12); max-width:80%; text-align:center; opacity:0; pointer-events:none; z-index:2; transition:opacity .35s ease, transform .35s ease; }
+  .bot-subtitle.show{ opacity:1; transform:translate(-50%,0); }
+  .msg-log{ flex:1; overflow-y:auto; padding:20px 24px; position:relative; z-index:1; }
   .row{ display:flex; margin:6px 0; }
   .row.user{ justify-content:flex-end; }
   .bubble{ max-width:90%; padding:16px 18px; border-radius:20px; line-height:1.6; white-space:pre-wrap; word-wrap:break-word; font-size:clamp(18px,2.5vw,24px); }
@@ -219,6 +227,8 @@ add_shortcode('compostaje_gpt', function() {
   @keyframes blink{ 0%,80%,100%{opacity:.2} 40%{opacity:1} }
   @media (max-width:560px){
     .chips{ justify-content:flex-start; padding:10px 8px; }
+    .bot-stage{ height:230px; padding:8px 12px 16px; }
+    .bot-subtitle{ bottom:16px; }
   }
   .input{ padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
   `;
@@ -255,7 +265,13 @@ add_shortcode('compostaje_gpt', function() {
         <button class="chip" data-q="¿Cuánto tarda la poción del compost?">¿Cuánto tarda la poción del compost?</button>
         <button class="chip" data-q="¿Qué bichitos ayudan en el compost?">¿Qué bichitos ayudan en el compost?</button>
       </div>
-      <div class="msgs" id="msgs"></div>
+      <div class="msgs" id="msgs">
+        <div class="bot-stage" id="botStage">
+          <canvas class="bot-canvas" id="botCanvas"></canvas>
+          <div class="bot-subtitle" id="botSubtitle"></div>
+        </div>
+        <div class="msg-log" id="msgLog"></div>
+      </div>
       <div class="input">
         <input class="field" id="field" type="text" placeholder="Escribe aquí tu pregunta compostera..." autocomplete="off">
         <button class="mic" id="mic" aria-label="Hablar" title="Hablar">
@@ -284,7 +300,10 @@ add_shortcode('compostaje_gpt', function() {
   }
 
   // JS logic isolated
-  const msgsEl = root.getElementById('msgs');
+  const logEl = root.getElementById('msgLog');
+  const stageEl = root.getElementById('botStage');
+  const canvas = root.getElementById('botCanvas');
+  const subtitleEl = root.getElementById('botSubtitle');
   const fieldEl = root.getElementById('field');
     const sendBtn = root.getElementById('send');
     const micBtn  = root.getElementById('mic');
@@ -292,6 +311,367 @@ add_shortcode('compostaje_gpt', function() {
     let sending = false;
     let recognition = null;
     let selectedVoice = null;
+    let robotSpeaking = false;
+    let subtitleTimer = 0;
+    let fallbackSpeechTimeout = null;
+    let fallbackSubtitleTimeout = null;
+
+    const ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
+    const stageSize = { width: 0, height: 0 };
+    const crumbs = ctx ? Array.from({length:7}, () => ({ angle: Math.random()*Math.PI*2, radius: 0.28 + Math.random()*0.35, size: 6 + Math.random()*5, color: Math.random() > 0.5 ? '#8ed16f' : '#b47b36' })) : [];
+    const sparks = ctx ? Array.from({length:6}, () => ({ angle: Math.random()*Math.PI*2, distance: 0.65 + Math.random()*0.2, speed: 0.005 + Math.random()*0.01, size: 6 + Math.random()*3, color: Math.random() > 0.5 ? '#ffadad' : '#9bf6ff' })) : [];
+    let blinkTimer = 150;
+    let blinkTarget = 0;
+    let blinkValue = 0;
+    let mouthValue = 0.2;
+    let floatPhase = 0;
+
+    function updateStageStateFallback(){
+      if (ctx) return;
+      const hasSubtitle = subtitleEl && subtitleEl.textContent.trim().length > 0;
+      const showSubtitle = (robotSpeaking || subtitleTimer > 0) && hasSubtitle;
+      stageEl.classList.toggle('is-speaking', robotSpeaking);
+      stageEl.classList.toggle('is-saying', showSubtitle);
+      if (subtitleEl){
+        subtitleEl.classList.toggle('show', showSubtitle);
+      }
+    }
+
+    function scheduleFallbackHide(ms){
+      if (ctx) return;
+      clearTimeout(fallbackSubtitleTimeout);
+      fallbackSubtitleTimeout = setTimeout(()=>{
+        subtitleTimer = 0;
+        robotSpeaking = false;
+        updateStageStateFallback();
+      }, ms);
+    }
+
+    function robotShowSubtitle(text){
+      if (!subtitleEl) return;
+      subtitleEl.textContent = text;
+      subtitleTimer = 260;
+      updateStageStateFallback();
+      scheduleFallbackHide(3200);
+    }
+
+    function robotStartSpeaking(){
+      clearTimeout(fallbackSpeechTimeout);
+      if (!ctx) clearTimeout(fallbackSubtitleTimeout);
+      robotSpeaking = true;
+      subtitleTimer = Math.max(subtitleTimer, 260);
+      updateStageStateFallback();
+    }
+
+    function robotStopSpeaking(){
+      clearTimeout(fallbackSpeechTimeout);
+      if (robotSpeaking) subtitleTimer = Math.max(subtitleTimer, 120);
+      robotSpeaking = false;
+      updateStageStateFallback();
+      scheduleFallbackHide(2000);
+    }
+
+    function robotSimulateSpeech(duration){
+      robotStartSpeaking();
+      fallbackSpeechTimeout = setTimeout(()=>{ robotStopSpeaking(); }, duration);
+    }
+
+    if (ctx){
+      const drawRoundedRect = (x,y,w,h,r)=>{
+        const rr = Math.min(r, h/2, w/2);
+        ctx.beginPath();
+        ctx.moveTo(x+rr, y);
+        ctx.lineTo(x+w-rr, y);
+        ctx.quadraticCurveTo(x+w, y, x+w, y+rr);
+        ctx.lineTo(x+w, y+h-rr);
+        ctx.quadraticCurveTo(x+w, y+h, x+w-rr, y+h);
+        ctx.lineTo(x+rr, y+h);
+        ctx.quadraticCurveTo(x, y+h, x, y+h-rr);
+        ctx.lineTo(x, y+rr);
+        ctx.quadraticCurveTo(x, y, x+rr, y);
+        ctx.closePath();
+      };
+
+      function resizeRobot(){
+        const rect = stageEl.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        canvas.style.width = rect.width + 'px';
+        canvas.style.height = rect.height + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        stageSize.width = rect.width;
+        stageSize.height = rect.height;
+      }
+
+      resizeRobot();
+      window.addEventListener('resize', resizeRobot);
+      if (window.ResizeObserver){
+        try {
+          const ro = new ResizeObserver(resizeRobot);
+          ro.observe(stageEl);
+        } catch(e){}
+      }
+
+      function drawCloud(x,y,scale){
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(scale, scale);
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.beginPath();
+        ctx.arc(-20, 0, 22, 0, Math.PI*2);
+        ctx.arc(10, -8, 26, 0, Math.PI*2);
+        ctx.arc(36, 6, 20, 0, Math.PI*2);
+        ctx.arc(0, 12, 24, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function loop(){
+        if (!stageSize.width || !stageSize.height){
+          requestAnimationFrame(loop);
+          return;
+        }
+        floatPhase += 1;
+        blinkTimer--;
+        if (blinkTimer <= 0){
+          blinkTarget = 1;
+          blinkTimer = 160 + Math.random()*120;
+        }
+        blinkValue += (blinkTarget - blinkValue) * 0.2;
+        if (blinkTarget === 1 && blinkValue > 0.9){
+          blinkTarget = 0;
+        }
+
+        const mouthTarget = robotSpeaking ? 0.7 + 0.15*Math.sin(floatPhase*0.25) : 0.25 + 0.08*Math.sin(floatPhase*0.18);
+        mouthValue += (mouthTarget - mouthValue) * 0.25;
+
+        if (robotSpeaking){
+          subtitleTimer = Math.max(subtitleTimer, 200);
+        } else if (subtitleTimer > 0){
+          subtitleTimer -= 1;
+        }
+
+        const hasSubtitle = subtitleEl && subtitleEl.textContent.trim().length > 0;
+        const showSubtitle = (robotSpeaking || subtitleTimer > 0) && hasSubtitle;
+        stageEl.classList.toggle('is-speaking', robotSpeaking);
+        stageEl.classList.toggle('is-saying', showSubtitle);
+        if (subtitleEl){
+          subtitleEl.classList.toggle('show', showSubtitle);
+        }
+
+        const w = stageSize.width;
+        const h = stageSize.height;
+        ctx.clearRect(0,0,w,h);
+
+        // background sun
+        const sunX = w*0.12;
+        const sunY = h*0.18;
+        ctx.fillStyle = '#ffe066';
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, 26, 0, Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,209,102,0.7)';
+        ctx.lineWidth = 3;
+        for (let i=0;i<10;i++){
+          const angle = (Math.PI*2/10)*i + floatPhase*0.02;
+          ctx.beginPath();
+          ctx.moveTo(sunX + Math.cos(angle)*30, sunY + Math.sin(angle)*30);
+          ctx.lineTo(sunX + Math.cos(angle)*44, sunY + Math.sin(angle)*44);
+          ctx.stroke();
+        }
+
+        // clouds
+        drawCloud(w*0.72, h*0.18 + Math.sin(floatPhase*0.01)*6, 0.9);
+        drawCloud(w*0.45, h*0.12 + Math.cos(floatPhase*0.012)*4, 0.7);
+
+        const groundY = h*0.78 + Math.sin(floatPhase*0.02)*3;
+        ctx.fillStyle = '#b8f5a3';
+        ctx.beginPath();
+        ctx.moveTo(0, groundY);
+        ctx.quadraticCurveTo(w*0.25, groundY-24, w*0.5, groundY-10);
+        ctx.quadraticCurveTo(w*0.8, groundY+8, w, groundY-18);
+        ctx.lineTo(w, h);
+        ctx.lineTo(0, h);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#7bd7f0';
+        ctx.beginPath();
+        ctx.moveTo(0, groundY);
+        ctx.bezierCurveTo(w*0.2, groundY-18, w*0.35, groundY-6, w*0.5, groundY-12);
+        ctx.bezierCurveTo(w*0.7, groundY-24, w*0.85, groundY-6, w, groundY-20);
+        ctx.lineTo(w, groundY);
+        ctx.closePath();
+        ctx.fill();
+
+        const bob = Math.sin(floatPhase*0.05) * (robotSpeaking ? 10 : 6);
+        const centerX = w/2;
+        const baseY = groundY - 16 + bob;
+        const bodyW = Math.min(220, w*0.55);
+        const bodyH = Math.min(170, h*0.5);
+        const bodyX = centerX - bodyW/2;
+        const bodyY = baseY - bodyH;
+
+        // shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.08)';
+        ctx.beginPath();
+        ctx.ellipse(centerX, baseY+8, bodyW*0.45, 18, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // legs
+        ctx.strokeStyle = '#2f8f67';
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 12;
+        ctx.beginPath();
+        ctx.moveTo(centerX - bodyW*0.22, baseY-6);
+        ctx.lineTo(centerX - bodyW*0.22, baseY+10);
+        ctx.moveTo(centerX + bodyW*0.22, baseY-6);
+        ctx.lineTo(centerX + bodyW*0.22, baseY+10);
+        ctx.stroke();
+
+        // body
+        ctx.fillStyle = '#57cc99';
+        ctx.strokeStyle = '#2f8f67';
+        ctx.lineWidth = 6;
+        drawRoundedRect(bodyX, bodyY, bodyW, bodyH, 32);
+        ctx.fill();
+        ctx.stroke();
+
+        // lid
+        const lidH = bodyH*0.18;
+        const lidY = bodyY - lidH*0.45;
+        ctx.fillStyle = '#38a3a5';
+        drawRoundedRect(bodyX + bodyW*0.08, lidY, bodyW*0.84, lidH, 20);
+        ctx.fill();
+
+        // antenna
+        ctx.strokeStyle = '#2f8f67';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(centerX, lidY);
+        ctx.quadraticCurveTo(centerX, lidY-30 - Math.sin(floatPhase*0.09)*6, centerX, lidY-48 - Math.sin(floatPhase*0.09)*6);
+        ctx.stroke();
+        ctx.fillStyle = '#ffd166';
+        ctx.beginPath();
+        ctx.arc(centerX, lidY-56 - Math.sin(floatPhase*0.09)*6, 10, 0, Math.PI*2);
+        ctx.fill();
+
+        // face area
+        const faceH = bodyH*0.42;
+        const faceY = bodyY + bodyH*0.12;
+        const faceX = bodyX + bodyW*0.1;
+        const faceW = bodyW*0.8;
+        ctx.fillStyle = '#9bf6ff';
+        drawRoundedRect(faceX, faceY, faceW, faceH, 24);
+        ctx.fill();
+
+        // cheeks
+        ctx.fillStyle = '#ffcad4';
+        ctx.beginPath();
+        ctx.ellipse(faceX + faceW*0.18, faceY + faceH*0.65, 16, 12, 0, 0, Math.PI*2);
+        ctx.ellipse(faceX + faceW*0.82, faceY + faceH*0.65, 16, 12, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        const eyeOpen = Math.max(0.1, 1 - blinkValue);
+        const eyeW = 24;
+        const eyeH = 18 * eyeOpen;
+        const eyeY = faceY + faceH*0.42;
+        const eyeOffset = faceW*0.26;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.ellipse(centerX - eyeOffset, eyeY, eyeW, Math.max(6, eyeH), 0, 0, Math.PI*2);
+        ctx.ellipse(centerX + eyeOffset, eyeY, eyeW, Math.max(6, eyeH), 0, 0, Math.PI*2);
+        ctx.fill();
+
+        ctx.fillStyle = '#1f3b4d';
+        const pupilBob = Math.sin(floatPhase*0.05)*3;
+        ctx.beginPath();
+        ctx.ellipse(centerX - eyeOffset, eyeY + pupilBob, 10, Math.max(4, eyeH*0.4), 0, 0, Math.PI*2);
+        ctx.ellipse(centerX + eyeOffset, eyeY + pupilBob, 10, Math.max(4, eyeH*0.4), 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // mouth
+        const mouthW = faceW*0.42;
+        const mouthH = 10 + 28*mouthValue;
+        const mouthY = faceY + faceH*0.72;
+        ctx.fillStyle = '#ff9f1c';
+        drawRoundedRect(centerX - mouthW/2, mouthY - mouthH/2, mouthW, mouthH, 14);
+        ctx.fill();
+        ctx.fillStyle = '#1f3b4d';
+        ctx.fillRect(centerX - mouthW*0.35, mouthY - 3, mouthW*0.7, 6);
+
+        // arms
+        const armY = faceY + faceH*0.78;
+        const wave = Math.sin(floatPhase*0.08) * (robotSpeaking ? 22 : 12);
+        ctx.strokeStyle = '#38a3a5';
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 12;
+        ctx.beginPath();
+        ctx.moveTo(bodyX + 12, armY);
+        ctx.quadraticCurveTo(bodyX - bodyW*0.25, armY - wave - 10, bodyX - bodyW*0.18, armY + wave);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(bodyX + bodyW - 12, armY);
+        ctx.quadraticCurveTo(bodyX + bodyW + bodyW*0.25, armY - wave - 10, bodyX + bodyW + bodyW*0.18, armY + wave);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ff6b6b';
+        ctx.beginPath();
+        ctx.ellipse(bodyX - bodyW*0.2, armY + wave, 14, 14, 0, 0, Math.PI*2);
+        ctx.ellipse(bodyX + bodyW + bodyW*0.2, armY + wave, 14, 14, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // compost window
+        const windowR = bodyW*0.32;
+        const windowY = bodyY + bodyH*0.7;
+        ctx.fillStyle = '#1f3b4d';
+        ctx.beginPath();
+        ctx.ellipse(centerX, windowY, windowR, windowR*0.65, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = '#b2f2bb';
+        ctx.beginPath();
+        ctx.ellipse(centerX, windowY, windowR-8, windowR*0.65-8, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(centerX, windowY, windowR-8, windowR*0.65-8, 0, 0, Math.PI*2);
+        ctx.clip();
+        crumbs.forEach((crumb)=>{
+          crumb.angle += 0.01 + (robotSpeaking ? 0.015 : 0.007);
+          const cx = centerX + Math.cos(crumb.angle) * (windowR-22) * crumb.radius;
+          const cy = windowY + Math.sin(crumb.angle) * (windowR*0.6-18) * crumb.radius;
+          ctx.fillStyle = crumb.color;
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, crumb.size*0.5, crumb.size*0.35, crumb.angle, 0, Math.PI*2);
+          ctx.fill();
+        });
+        ctx.restore();
+
+        // sparkles / hearts
+        sparks.forEach((spark, index)=>{
+          spark.angle += spark.speed * (robotSpeaking ? 1.5 : 1);
+          const radius = (windowR + 30) * spark.distance;
+          const sx = centerX + Math.cos(spark.angle + index) * radius;
+          const sy = windowY - 30 + Math.sin(spark.angle + index) * (radius*0.4);
+          ctx.save();
+          ctx.translate(sx, sy - Math.sin(floatPhase*0.03 + index)*6);
+          const size = spark.size + (robotSpeaking ? 3 : 0);
+          ctx.fillStyle = spark.color;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.bezierCurveTo(-size*0.6, -size*0.6, -size, size*0.4, 0, size);
+          ctx.bezierCurveTo(size, size*0.4, size*0.6, -size*0.6, 0, 0);
+          ctx.fill();
+          ctx.restore();
+        });
+
+        requestAnimationFrame(loop);
+      }
+
+      requestAnimationFrame(loop);
+    }
 
     if ('speechSynthesis' in window){
       const pickVoice = () => {
@@ -327,10 +707,10 @@ add_shortcode('compostaje_gpt', function() {
   }
 
   function persist(){ try{ localStorage.setItem('ckMessages', JSON.stringify(history)); } catch(e){} }
-    function scroll(){ msgsEl.scrollTop = msgsEl.scrollHeight; }
+    function scroll(){ logEl.scrollTop = logEl.scrollHeight; }
     function setSending(state){ sending = state; sendBtn.disabled = state; Array.from(chips.children).forEach(b=>b.disabled=state); }
     function typingOn(){ render('ai','',true); scroll(); }
-    function typingOff(){ Array.from(msgsEl.querySelectorAll('[data-typing="1"]')).forEach(n=>n.remove()); }
+    function typingOff(){ Array.from(logEl.querySelectorAll('[data-typing="1"]')).forEach(n=>n.remove()); }
 
 
     function typeText(el, text){
@@ -344,18 +724,42 @@ add_shortcode('compostaje_gpt', function() {
     }
 
     function speakAndType(el, text){
-      if (!('speechSynthesis' in window)) { typeText(el, text); return; }
       const clean = text
         .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')
         .replace(/[\*#_~`>\[\]\(\){}]/g, '')
         .replace(/<[^>]*>/g, '');
-      const u = new SpeechSynthesisUtterance(clean);
-      u.lang = 'es-ES';
-      u.pitch = 1.1;
-      u.rate  = 1;
-      if (selectedVoice) u.voice = selectedVoice;
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(u);
+      const preview = clean.replace(/\s+/g, ' ').trim();
+      if (preview){
+        const shown = preview.length > 160 ? preview.slice(0,157) + '…' : preview;
+        robotShowSubtitle(shown);
+      }
+
+      if ('speechSynthesis' in window){
+        robotStopSpeaking();
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance((clean || text || '').trim());
+        utterance.lang = 'es-ES';
+        utterance.pitch = 1.1;
+        utterance.rate  = 1;
+        if (selectedVoice) utterance.voice = selectedVoice;
+        utterance.onstart = () => { robotStartSpeaking(); };
+        utterance.onend = () => { robotStopSpeaking(); };
+        utterance.oncancel = () => { robotStopSpeaking(); };
+        utterance.onpause = () => { robotStopSpeaking(); };
+        utterance.onresume = () => { robotStartSpeaking(); };
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch(e){
+          if (preview){
+            robotStopSpeaking();
+            robotSimulateSpeech(Math.min(7000, Math.max(1800, preview.length * 55)));
+          }
+        }
+      } else if (preview){
+        robotStopSpeaking();
+        robotSimulateSpeech(Math.min(7000, Math.max(1800, preview.length * 55)));
+      }
+
       typeText(el, text);
     }
 
@@ -381,7 +785,7 @@ add_shortcode('compostaje_gpt', function() {
           }
       }
       row.appendChild(bubble);
-      msgsEl.appendChild(row);
+      logEl.appendChild(row);
     }
 
   async function send(txt){
