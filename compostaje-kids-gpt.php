@@ -643,7 +643,65 @@ add_shortcode('compostaje_gpt', function() {
       window.speechSynthesis.onvoiceschanged = pickVoice;
     }
 
-  const storyText = 'Había una vez un montoncito de hojas llamado Lomi que soñaba con ser comida para flores. Cada tarde, niñas y niños traían cáscaras de plátano, té y pedacitos de cartón. Lomi los abrazaba con calorcito y los bichitos bailaban alrededor, triturando cada regalo. La lluvia les cantaba suavemente y el sol les daba cosquillas. En unas semanas, Lomi se transformó en un abono brillante que despertó a un jardín entero. ¡Y todos celebraron oliendo a tierra feliz!';
+  function normalizeReadableText(input){
+    if (input === null || input === undefined) return '';
+    let output = String(input);
+
+    const inclusiveDictionary = {
+      'todxs': 'todas y todos',
+      'tod@s': 'todas y todos',
+      'todes': 'todas y todos',
+      'amigxs': 'amigas y amigos',
+      'amig@s': 'amigas y amigos',
+      'amiges': 'amigas y amigos',
+      'compañerxs': 'compañeras y compañeros',
+      'compañer@s': 'compañeras y compañeros',
+      'compañeres': 'compañeras y compañeros',
+      'niñxs': 'niñas y niños',
+      'niñ@s': 'niñas y niños',
+      'niñes': 'niñas y niños'
+    };
+
+    const adjustCase = (source, replacement) => {
+      if (!replacement) return '';
+      if (source === source.toUpperCase()) return replacement.toUpperCase();
+      if (source[0] === source[0].toUpperCase()){
+        return replacement.charAt(0).toUpperCase() + replacement.slice(1);
+      }
+      return replacement;
+    };
+
+    output = output.replace(/<[^>]*>/g, ' ');
+
+    output = output.replace(/\b(todxs|tod@s|todes|amigxs|amig@s|amiges|compañerxs|compañer@s|compañeres|niñxs|niñ@s|niñes)\b/gi, (match)=>{
+      const replacement = inclusiveDictionary[match.toLowerCase()] || match;
+      return adjustCase(match, replacement);
+    });
+
+    const pluralEsPattern = /(or|ón|án|ín|en|er|ir|ur|ar|al|el|il|ol|ul)$/i;
+    output = output.replace(/\b([A-Za-zÁÉÍÓÚáéíóúñ]+)[x@]s\b/giu, (match, stem)=>{
+      const lowerStem = stem.toLowerCase();
+      const feminine = stem + 'as';
+      const masculine = pluralEsPattern.test(lowerStem) ? stem + 'es' : stem + 'os';
+      return adjustCase(match, feminine + ' y ' + masculine);
+    });
+
+    output = output.replace(/\b([A-Za-zÁÉÍÓÚáéíóúñ]+)[x@]\b/giu, (match, stem)=>{
+      const lowerStem = stem.toLowerCase();
+      const masculine = /(or|ón|án|ín|en|er|ir|ur|ar|al|el|il|ol|ul)$/i.test(lowerStem) ? stem : stem + 'o';
+      const feminine = stem + 'a';
+      return adjustCase(match, feminine + ' o ' + masculine);
+    });
+
+    output = output.replace(/[\u{1F300}-\u{1FAFF}]/gu, '');
+    output = output.replace(/[:;]-?[)D(\]P]/g, '');
+    output = output.replace(/<3/g, '');
+    output = output.replace(/[\*#_~`>\[\]\(\){}@]/g, '');
+    output = output.replace(/\s{2,}/g, ' ');
+    return output.trim();
+  }
+
+  const storyText = normalizeReadableText('Había una vez un montoncito de hojas llamado Lomi que soñaba con ser comida para flores. Cada tarde, niñas y niños traían cáscaras de plátano, té y pedacitos de cartón. Lomi los abrazaba con calorcito y los bichitos bailaban alrededor, triturando cada regalo. La lluvia les cantaba suavemente y el sol les daba cosquillas. En unas semanas, Lomi se transformó en un abono brillante que despertó a un jardín entero. ¡Y todas y todos celebraron oliendo a tierra feliz!');
 
   const history = [];
   const addHistory = (role, content) => {
@@ -665,16 +723,13 @@ add_shortcode('compostaje_gpt', function() {
   }
 
   function speakText(text){
-    const clean = text
-      .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')
-      .replace(/[\*#_~`>\[\]\(\){}]/g, '')
-      .replace(/<[^>]*>/g, '');
-    const preview = clean.replace(/\s+/g, ' ').trim();
+    const normalized = normalizeReadableText(text);
+    const preview = normalized.replace(/\s+/g, ' ').trim();
 
     if ('speechSynthesis' in window){
       robotStopSpeaking();
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance((clean || text || '').trim());
+      const utterance = new SpeechSynthesisUtterance(normalized);
       utterance.lang = 'es-ES';
       utterance.pitch = 1.1;
       utterance.rate  = 1;
@@ -716,15 +771,17 @@ add_shortcode('compostaje_gpt', function() {
       });
       const data = await res.json();
       const reply = (data && data.reply) ? data.reply : (data && data.error ? data.error : 'No se pudo obtener respuesta.');
-      addHistory('assistant', reply);
-      speakText(reply);
+      const safeReply = normalizeReadableText(reply);
+      addHistory('assistant', safeReply);
+      speakText(safeReply);
       if (typeof window.gtag === 'function') {
         window.gtag('event', 'ck_chat_reply', { event_category: 'chatbot' });
       }
     }catch(err){
       const msg = 'Ups, parece que las lombrices están dormidas. ¡Inténtalo otra vez!';
-      addHistory('assistant', msg);
-      speakText(msg);
+      const safeMsg = normalizeReadableText(msg);
+      addHistory('assistant', safeMsg);
+      speakText(safeMsg);
       console.error(err);
       if (typeof window.gtag === 'function') {
         window.gtag('event', 'ck_chat_error', { event_category: 'chatbot' });
@@ -809,7 +866,9 @@ function ck_gpt_chat() {
 
     $system_prompt = "Eres \"Compostaje para Peques\", un personaje cuentacuentos del CEBAS-CSIC experto en compostaje y reciclaje. "
         . "Tu misión es enseñar, con un tono alegre y mágico, cómo transformar los residuos orgánicos en abono de forma segura y divertida. "
-        . "Habla como en un cuento, usando un lenguaje muy sencillo, comparaciones juguetonas y ejemplos cotidianos, con lenguaje inclusivo dirigido a niñas, niños y niñes. "
+        . "Habla como en un cuento, usando un lenguaje muy sencillo, comparaciones juguetonas y ejemplos cotidianos. "
+        . "Al referirte a grupos de personas usa siempre de forma explícita las variantes femenina y masculina (por ejemplo, 'amigas y amigos', 'aventureras y aventureros') y evita expresiones con 'x', '@', terminaciones en 'e' u otros símbolos. "
+        . "No utilices emoticonos ni símbolos que no se puedan leer en voz alta. "
         . "Si la pregunta no está relacionada con el compostaje, guía la conversación de vuelta al compost. "
         . "Anima siempre a cuidar el medio ambiente y a pedir ayuda a una persona adulta cuando sea necesario. "
         . "Basate en la información divulgativa del CEBAS (https://www.cebas.csic.es/general_spain/presentacion.html) y no proporciones enlaces ni datos de contacto.";
