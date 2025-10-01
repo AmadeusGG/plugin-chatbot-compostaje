@@ -188,26 +188,28 @@ add_shortcode('compostaje_gpt', function() {
   .title{ margin:4px 0 2px; font-size: clamp(26px,5vw,40px); font-weight:800; }
   .desc{ margin:0; font-size: clamp(18px,3vw,26px); color:#4b5563; }
   .bot-stage{ position:relative; flex:1; min-height:0; border-top:1px solid #f3d1dc; background:linear-gradient(180deg,#ffeef6 0%,#fff9d7 100%); display:flex; align-items:center; justify-content:center; padding:16px 22px 24px; }
-  .bot-stage::before{ content:''; position:absolute; inset:18px 22px 90px; background:rgba(255,255,255,0.72); border-radius:32px; box-shadow:0 12px 24px rgba(255,107,107,0.25); z-index:0; transition:transform .6s ease, box-shadow .6s ease, background .4s ease; }
+  .bot-stage::before{ content:''; position:absolute; inset:18px 22px 120px; background:rgba(255,255,255,0.72); border-radius:32px; box-shadow:0 12px 24px rgba(255,107,107,0.25); z-index:0; transition:transform .6s ease, box-shadow .6s ease, background .4s ease; }
   .bot-stage.is-speaking::before{ transform:scale(1.02); box-shadow:0 20px 38px rgba(255,107,107,0.45); }
-  .bot-stage.is-saying::before{ box-shadow:0 18px 34px rgba(255,211,59,0.45); }
   .bot-stage.is-listening::before{ background:rgba(255,255,255,0.9); box-shadow:0 18px 32px rgba(59,130,246,0.35); }
   .bot-stage.is-processing::before{ background:rgba(255,255,255,0.85); box-shadow:0 18px 32px rgba(16,185,129,0.35); }
   canvas.bot-canvas{ position:relative; z-index:1; width:100%; height:100%; display:block; }
-  .bot-subtitle{ position:absolute; left:50%; bottom:24px; transform:translate(-50%,40px); background:#fffbe8; border:2px solid #ffd166; border-radius:18px; padding:10px 16px; font-size:clamp(16px,2.5vw,20px); color:#ff6b6b; font-weight:600; box-shadow:0 6px 16px rgba(0,0,0,0.12); max-width:80%; text-align:center; opacity:0; pointer-events:none; z-index:2; transition:opacity .35s ease, transform .35s ease; }
-  .bot-subtitle.show{ opacity:1; transform:translate(-50%,0); }
-  .voice-btn{ position:absolute; left:50%; bottom:26px; transform:translate(-50%,0); z-index:3; padding:14px 28px; border-radius:999px; border:none; font-size:clamp(18px,3vw,26px); font-weight:700; background:#ff6b6b; color:#fff; box-shadow:0 10px 22px rgba(255,107,107,0.35); cursor:pointer; transition:transform .18s ease, box-shadow .18s ease, filter .2s ease; }
+  .choice-buttons{ position:absolute; left:50%; bottom:30px; transform:translateX(-50%); display:flex; flex-direction:column; gap:16px; width:clamp(240px,60%,420px); z-index:3; }
+  .choice-buttons button{ width:100%; border:none; border-radius:999px; font-size:clamp(18px,3vw,24px); font-weight:700; padding:14px 24px; cursor:pointer; transition:transform .18s ease, box-shadow .18s ease, filter .2s ease; box-shadow:0 10px 22px rgba(255,107,107,0.35); }
+  .story-btn{ background:#fecd45; color:#8a4a00; box-shadow:0 10px 22px rgba(254,205,69,0.35); }
+  .voice-btn{ background:#ff6b6b; color:#fff; box-shadow:0 10px 22px rgba(255,107,107,0.35); }
   .voice-btn:hover{ filter:brightness(1.08); }
-  .voice-btn:active{ transform:translate(-50%,2px); box-shadow:0 6px 14px rgba(255,107,107,0.4); }
+  .story-btn:hover{ filter:brightness(1.06); }
+  .choice-buttons button:active{ transform:translateY(2px); box-shadow:0 6px 14px rgba(0,0,0,0.25); }
   .voice-btn[disabled]{ opacity:.5; cursor:not-allowed; box-shadow:0 8px 18px rgba(148,163,184,0.35); }
   .bot-stage.is-listening .voice-btn{ background:#60a5fa; box-shadow:0 12px 24px rgba(96,165,250,0.45); }
   .bot-stage.is-processing .voice-btn{ background:#34d399; box-shadow:0 12px 24px rgba(52,211,153,0.45); }
+  .bot-stage.is-processing .story-btn{ background:#fde68a; box-shadow:0 12px 24px rgba(250,204,21,0.45); }
   @media (max-width:560px){
     .header{ padding:16px 14px; }
     .bot-stage{ padding:12px 14px 20px; }
-    .bot-stage::before{ inset:14px 16px 82px; }
-    .bot-subtitle{ bottom:18px; }
-    .voice-btn{ padding:12px 22px; }
+    .bot-stage::before{ inset:14px 16px 120px; }
+    .choice-buttons{ bottom:22px; gap:12px; }
+    .choice-buttons button{ padding:12px 20px; }
   }
   `;
 
@@ -224,10 +226,10 @@ add_shortcode('compostaje_gpt', function() {
   .bot-stage{ border-top:1px solid #1f2933; background:linear-gradient(180deg,#111827 0%,#1f2937 100%); }
   .bot-stage::before{ background:rgba(17,24,39,0.82); box-shadow:0 16px 32px rgba(96,165,250,0.25); }
   .bot-stage.is-speaking::before{ box-shadow:0 22px 40px rgba(96,165,250,0.45); }
-  .bot-stage.is-saying::before{ box-shadow:0 20px 36px rgba(253,224,71,0.4); }
   .bot-stage.is-listening::before{ background:rgba(17,24,39,0.92); box-shadow:0 20px 34px rgba(96,165,250,0.45); }
   .bot-stage.is-processing::before{ background:rgba(17,24,39,0.9); box-shadow:0 20px 34px rgba(45,212,191,0.45); }
-  .bot-subtitle{ background:rgba(31,41,55,0.9); border-color:#60a5fa; color:#bfdbfe; }
+  .choice-buttons button{ box-shadow:0 10px 22px rgba(96,165,250,0.25); }
+  .story-btn{ background:#fbbf24; color:#1f2937; box-shadow:0 10px 22px rgba(251,191,36,0.35); }
   .voice-btn{ background:#60a5fa; }
   .bot-stage.is-processing .voice-btn{ background:#34d399; }
   `;
@@ -244,8 +246,10 @@ add_shortcode('compostaje_gpt', function() {
       </div>
       <div class="bot-stage" id="botStage" role="region" aria-live="polite">
         <canvas class="bot-canvas" id="botCanvas"></canvas>
-        <div class="bot-subtitle" id="botSubtitle"></div>
-        <button class="voice-btn" id="voiceBtn" type="button">¡Pregúntame!</button>
+        <div class="choice-buttons" id="choiceButtons">
+          <button class="story-btn" id="storyBtn" type="button">Cuéntame el genial cuento mágico del compost</button>
+          <button class="voice-btn" id="voiceBtn" type="button">Pregúntame sobre el compost</button>
+        </div>
       </div>
     </div>
   `;
@@ -266,16 +270,14 @@ add_shortcode('compostaje_gpt', function() {
   // JS logic isolated
   const stageEl = root.getElementById('botStage');
   const canvas = root.getElementById('botCanvas');
-  const subtitleEl = root.getElementById('botSubtitle');
+  const storyBtn = root.getElementById('storyBtn');
   const voiceBtn = root.getElementById('voiceBtn');
   let sending = false;
   let listening = false;
   let recognition = null;
   let selectedVoice = null;
   let robotSpeaking = false;
-  let subtitleTimer = 0;
   let fallbackSpeechTimeout = null;
-  let fallbackSubtitleTimeout = null;
 
   const ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
   const stageSize = { width: 0, height: 0 };
@@ -302,66 +304,29 @@ add_shortcode('compostaje_gpt', function() {
       voiceBtn.textContent = 'Pensando...';
     } else {
       voiceBtn.disabled = false;
-      voiceBtn.textContent = '¡Pregúntame!';
+      voiceBtn.textContent = 'Pregúntame sobre el compost';
     }
   }
 
   function updateStageStateFallback(){
     if (ctx) return;
-    const hasSubtitle = subtitleEl && subtitleEl.textContent.trim().length > 0;
-    const showSubtitle = (robotSpeaking || subtitleTimer > 0) && hasSubtitle;
     stageEl.classList.toggle('is-speaking', robotSpeaking);
-    stageEl.classList.toggle('is-saying', showSubtitle);
-    if (subtitleEl){
-      subtitleEl.classList.toggle('show', showSubtitle);
-    }
-  }
-
-  function scheduleFallbackHide(ms){
-    if (ctx) return;
-    clearTimeout(fallbackSubtitleTimeout);
-    fallbackSubtitleTimeout = setTimeout(()=>{
-      subtitleTimer = 0;
-      robotSpeaking = false;
-      if (subtitleEl) subtitleEl.textContent = '';
-      updateStageStateFallback();
-    }, ms);
-  }
-
-  function robotShowSubtitle(text){
-    if (!subtitleEl) return;
-    if (!text){
-      subtitleTimer = 0;
-      subtitleEl.textContent = '';
-      subtitleEl.classList.remove('show');
-      stageEl.classList.remove('is-saying');
-      updateStageStateFallback();
-      return;
-    }
-    subtitleEl.textContent = text;
-    subtitleTimer = 260;
-    updateStageStateFallback();
-    scheduleFallbackHide(3200);
   }
 
   function robotStartSpeaking(){
     clearTimeout(fallbackSpeechTimeout);
-    if (!ctx) clearTimeout(fallbackSubtitleTimeout);
     robotSpeaking = true;
-    subtitleTimer = Math.max(subtitleTimer, 260);
     stageEl.classList.remove('is-processing');
     updateStageStateFallback();
   }
 
   function robotStopSpeaking(){
     clearTimeout(fallbackSpeechTimeout);
-    if (robotSpeaking) subtitleTimer = Math.max(subtitleTimer, 120);
     robotSpeaking = false;
     floatPhase = 0;
     blinkTarget = 0;
     blinkTimer = 150;
     updateStageStateFallback();
-    scheduleFallbackHide(2000);
   }
 
   function robotSimulateSpeech(duration){
@@ -396,6 +361,11 @@ add_shortcode('compostaje_gpt', function() {
       stageSize.width = rect.width;
       stageSize.height = rect.height;
     }
+    subtitleEl.textContent = text;
+    subtitleTimer = 260;
+    updateStageStateFallback();
+    scheduleFallbackHide(3200);
+  }
 
     resizeRobot();
     window.addEventListener('resize', resizeRobot);
@@ -446,19 +416,7 @@ add_shortcode('compostaje_gpt', function() {
       const mouthTarget = robotSpeaking ? 0.72 + 0.18*Math.sin(effectivePhase*0.25) : 0.2;
       mouthValue += (mouthTarget - mouthValue) * (robotSpeaking ? 0.25 : 0.18);
 
-      if (robotSpeaking){
-        subtitleTimer = Math.max(subtitleTimer, 200);
-      } else if (subtitleTimer > 0){
-        subtitleTimer = Math.max(0, subtitleTimer - 1);
-      }
-
-      const hasSubtitle = subtitleEl && subtitleEl.textContent.trim().length > 0;
-      const showSubtitle = (robotSpeaking || subtitleTimer > 0) && hasSubtitle;
       stageEl.classList.toggle('is-speaking', robotSpeaking);
-      stageEl.classList.toggle('is-saying', showSubtitle);
-      if (subtitleEl){
-        subtitleEl.classList.toggle('show', showSubtitle);
-      }
 
       const w = stageSize.width;
       const h = stageSize.height;
@@ -686,12 +644,8 @@ add_shortcode('compostaje_gpt', function() {
   const history = [];
 
   function speakText(text){
-    const clean = (text || '').replace(/[\u{1F300}-\u{1FAFF}]/gu, '').replace(/[\*#_~`>\[\]\(\){}]/g, '').replace(/<[^>]*>/g, '');
+    const clean = (text || '').replace(/[\u{1F300}-\u{1FAFF}]/gu, '').replace(/[\*#_~`>\[\]\(\){}@|]/g, '').replace(/<[^>]*>/g, '');
     const preview = clean.replace(/\s+/g, ' ').trim();
-    if (preview){
-      const shown = preview.length > 160 ? preview.slice(0,157) + '…' : preview;
-      robotShowSubtitle(shown);
-    }
 
     if ('speechSynthesis' in window){
       robotStopSpeaking();
@@ -724,6 +678,9 @@ add_shortcode('compostaje_gpt', function() {
     sending = state;
     stageEl.classList.toggle('is-processing', state);
     updateVoiceButtonState();
+    if (storyBtn){
+      storyBtn.disabled = state;
+    }
   }
 
   async function send(txt){
@@ -733,7 +690,6 @@ add_shortcode('compostaje_gpt', function() {
       window.gtag('event', 'ck_chat_message', { event_category: 'chatbot' });
     }
     history.push({role:'user',content:txt});
-    robotShowSubtitle('¡Déjame pensar un momento!');
     try{
       const res = await fetch(ajaxUrl, {
         method:'POST',
@@ -761,13 +717,19 @@ add_shortcode('compostaje_gpt', function() {
     }
   }
 
+  function requestStory(){
+    if (sending) return;
+    const prompt = 'Cuéntame el genial cuento mágico del compost usando máximo 100 palabras, con lenguaje inclusivo para amiga y amigo, aventurera y aventurero, y que inspire a cuidar la naturaleza.';
+    send(prompt);
+  }
+
   function startListening(){
     if (!recognition || listening || sending) return;
     try {
       recognition.start();
     } catch(err){
       if (err && err.name === 'NotAllowedError'){
-        robotShowSubtitle('Necesito permiso para usar el micrófono.');
+        if (voiceBtn) voiceBtn.textContent = 'Necesito permiso para usar el micrófono';
       }
     }
   }
@@ -780,35 +742,32 @@ add_shortcode('compostaje_gpt', function() {
     recognition.onresult = (e) => {
       const transcript = e.results[0][0].transcript.trim();
       if (transcript) {
-        robotShowSubtitle('¡Genial! Estoy preparando una respuesta...');
         send(transcript);
       }
     };
     recognition.onstart = () => {
       listening = true;
       stageEl.classList.add('is-listening');
-      robotShowSubtitle('¡Te escucho! Habla clarito.');
       updateVoiceButtonState();
     };
     recognition.onend = () => {
       listening = false;
       stageEl.classList.remove('is-listening');
       updateVoiceButtonState();
-      if (!robotSpeaking) robotShowSubtitle('');
     };
     recognition.onerror = (e) => {
       listening = false;
       stageEl.classList.remove('is-listening');
       updateVoiceButtonState();
       if (e && e.error !== 'no-speech'){
-        robotShowSubtitle('No pude escucharlo, probemos otra vez.');
+        if (voiceBtn) voiceBtn.textContent = 'No pude escucharlo, probemos otra vez';
       }
     };
     updateVoiceButtonState();
   } else {
     updateVoiceButtonState();
-    if (subtitleEl){
-      robotShowSubtitle('Tu navegador no permite usar micrófono aquí.');
+    if (voiceBtn){
+      voiceBtn.textContent = 'Tu navegador no permite usar micrófono aquí';
     }
   }
 
@@ -818,14 +777,20 @@ add_shortcode('compostaje_gpt', function() {
       startListening();
     });
   }
+  if (storyBtn){
+    storyBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      requestStory();
+    });
+  }
   if (stageEl){
     stageEl.addEventListener('click', (e)=>{
-      if (voiceBtn && voiceBtn.contains(e.target)) return;
+      if ((voiceBtn && voiceBtn.contains(e.target)) || (storyBtn && storyBtn.contains(e.target))) return;
       startListening();
     });
   }
 
-  const welcome = '¡Hola, peque aventurerx del compost! Soy tu amigue del CEBAS-CSIC. Juntxs haremos magia con las cáscaras y las hojas para alimentar a las plantas. ¿Qué te gustaría saber?';
+  const welcome = '¡Hola, amiga y amigo aventurera y aventurero del compost! Soy tu compañera y compañero robot del CEBAS-CSIC. Juntas y juntos haremos magia con las cáscaras y las hojas para alimentar a las plantas. ¿Qué te gustaría saber?';
   history.push({role:'assistant',content:welcome});
   setTimeout(()=>{ speakText(welcome); }, 1200);
   // Ajuste de altura ya manejado con flexbox
@@ -866,7 +831,7 @@ function ck_gpt_chat() {
 
     $system_prompt = "Eres \"Compostaje para Peques\", un personaje cuentacuentos del CEBAS-CSIC experto en compostaje y reciclaje. "
         . "Tu misión es enseñar, con un tono alegre y mágico, cómo transformar los residuos orgánicos en abono de forma segura y divertida. "
-        . "Habla como en un cuento, usando un lenguaje muy sencillo, comparaciones juguetonas y ejemplos cotidianos, con lenguaje inclusivo dirigido a niñas, niños y niñes. "
+        . "Habla como en un cuento, usando un lenguaje muy sencillo, comparaciones juguetonas y ejemplos cotidianos, nombrando siempre a niñas y niños, por ejemplo amiga y amigo, aventurera y aventurero, evitando símbolos como x o @. "
         . "Si la pregunta no está relacionada con el compostaje, guía la conversación de vuelta al compost. "
         . "Anima siempre a cuidar el medio ambiente y a pedir ayuda a una persona adulta cuando sea necesario. "
         . "Basate en la información divulgativa del CEBAS (https://www.cebas.csic.es/general_spain/presentacion.html) y no proporciones enlaces ni datos de contacto.";
