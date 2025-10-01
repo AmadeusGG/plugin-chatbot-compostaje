@@ -131,7 +131,7 @@ add_shortcode('compostaje_gpt', function() {
      data-logo="<?php echo $logo; ?>"
      data-ajax="<?php echo $ajax; ?>"
      data-theme="<?php echo $theme ? $theme : 'light'; ?>"
-     style="display:block;contain:content;position:relative;z-index:1;"></div>
+     style="display:block;position:relative;z-index:1;"></div>
 
 <script>
 (function(){
@@ -150,11 +150,8 @@ add_shortcode('compostaje_gpt', function() {
   const themeOpt  = (mount.getAttribute('data-theme') || 'light').toLowerCase();
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;z-index:999999;background:url(https://consultoriainformatica.net/wp-content/uploads/2025/08/Chatbot-en-el-Jardin-Compostero.jpg) center/cover no-repeat;display:flex;justify-content:center;align-items:center;';
-  document.body.innerHTML = '';
-  document.documentElement.style.height = '100%';
-  document.body.style.height = '100%';
-  document.body.style.margin = '0';
-  document.body.appendChild(overlay);
+  mount.innerHTML = '';
+  mount.appendChild(overlay);
 
   const host = document.createElement('div');
   host.style.cssText = 'position:relative;width:90vw;height:90vh;max-width:1400px;max-height:900px;';
