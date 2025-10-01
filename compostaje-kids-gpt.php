@@ -300,6 +300,49 @@ add_shortcode('compostaje_gpt', function() {
   const stageSize = { width: 0, height: 0 };
   const crumbs = ctx ? Array.from({length:7}, () => ({ angle: Math.random()*Math.PI*2, radius: 0.28 + Math.random()*0.35, size: 6 + Math.random()*5, color: Math.random() > 0.5 ? '#8ed16f' : '#b47b36' })) : [];
   const sparks = ctx ? Array.from({length:6}, () => ({ angle: Math.random()*Math.PI*2, distance: 0.65 + Math.random()*0.2, speed: 0.005 + Math.random()*0.01, size: 6 + Math.random()*3, color: Math.random() > 0.5 ? '#ffadad' : '#9bf6ff' })) : [];
+  const compostTypes = ctx ? [
+    { type: 'leaf', base: '#6fcf97', accent: '#4cb944' },
+    { type: 'banana', base: '#ffdd67', accent: '#f4a261' },
+    { type: 'apple', base: '#ff8fa3', accent: '#d62828' },
+    { type: 'carrot', base: '#fb923c', accent: '#f97316' },
+    { type: 'eggshell', base: '#f3f1e8', accent: '#e4ded1' },
+    { type: 'tea', base: '#d4a373', accent: '#b08968' }
+  ] : [];
+  const compostItems = ctx ? [] : [];
+  const fireflies = ctx ? Array.from({length: 8}, () => ({
+    x: Math.random(),
+    y: Math.random()*0.4 + 0.05,
+    phase: Math.random()*Math.PI*2,
+    drift: 0.0008 + Math.random()*0.0012,
+    glow: 0.4 + Math.random()*0.4
+  })) : [];
+  let compostSpawnTimer = 0;
+  let tossHighlight = 0;
+  let wormPhase = 0;
+
+  const createCompostItem = (opts={}) => {
+    const data = compostTypes[Math.floor(Math.random()*compostTypes.length)];
+    if (!data) return null;
+    return {
+      ...data,
+      angle: Math.random()*Math.PI*2,
+      radius: 1.1 + Math.random()*0.5,
+      targetRadius: 0.55 + Math.random()*0.3,
+      speed: 0.01 + Math.random()*0.01,
+      bob: Math.random()*Math.PI*2,
+      bobSpeed: 0.02 + Math.random()*0.02,
+      rotation: Math.random()*Math.PI*2,
+      rotationSpeed: (Math.random()*0.03) - 0.015,
+      scale: 0.7 + Math.random()*0.4,
+      timer: 0,
+      alpha: 0,
+      phase: 'orbit',
+      spawnProgress: 0,
+      normX: typeof opts.normX === 'number' ? opts.normX : null,
+      normY: typeof opts.normY === 'number' ? opts.normY : null,
+      userSpawn: !!opts.userSpawn
+    };
+  };
   let blinkTimer = 150;
   let blinkTarget = 0;
   let blinkValue = 0;
@@ -329,6 +372,10 @@ add_shortcode('compostaje_gpt', function() {
   }
 
   if (ctx){
+      for (let i=0; i<5; i++){
+        const starter = createCompostItem();
+        if (starter) compostItems.push(starter);
+      }
       const drawRoundedRect = (x,y,w,h,r)=>{
         const rr = Math.min(r, h/2, w/2);
         ctx.beginPath();
@@ -379,6 +426,147 @@ add_shortcode('compostaje_gpt', function() {
         ctx.restore();
       }
 
+      function drawCompostable(item, x, y){
+        if (!item) return;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.globalAlpha = Math.max(0, Math.min(1, item.alpha));
+        const wobble = 1 + 0.06*Math.sin(item.bob*2);
+        ctx.scale(item.scale * wobble, item.scale * wobble);
+        ctx.rotate(item.rotation);
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        switch(item.type){
+          case 'leaf':
+            ctx.fillStyle = item.base;
+            ctx.beginPath();
+            ctx.moveTo(0, -22);
+            ctx.quadraticCurveTo(20, -10, 22, 8);
+            ctx.quadraticCurveTo(8, 26, 0, 34);
+            ctx.quadraticCurveTo(-8, 26, -22, 8);
+            ctx.quadraticCurveTo(-20, -10, 0, -22);
+            ctx.fill();
+            ctx.strokeStyle = item.accent;
+            ctx.lineWidth = 3.5;
+            ctx.beginPath();
+            ctx.moveTo(0, -22);
+            ctx.lineTo(0, 34);
+            ctx.moveTo(-8, 10);
+            ctx.quadraticCurveTo(0, 4, 8, 10);
+            ctx.stroke();
+            break;
+          case 'banana':
+            ctx.fillStyle = item.base;
+            ctx.beginPath();
+            ctx.moveTo(-26, -8);
+            ctx.quadraticCurveTo(-8, -22, 22, -12);
+            ctx.quadraticCurveTo(30, 4, -12, 16);
+            ctx.quadraticCurveTo(-30, 12, -26, -8);
+            ctx.fill();
+            ctx.fillStyle = item.accent;
+            ctx.beginPath();
+            ctx.ellipse(-24, -4, 4, 6, 0, 0, Math.PI*2);
+            ctx.ellipse(20, -4, 4, 6, 0, 0, Math.PI*2);
+            ctx.fill();
+            break;
+          case 'apple':
+            ctx.fillStyle = '#ffe0e7';
+            ctx.beginPath();
+            ctx.moveTo(-16, -30);
+            ctx.quadraticCurveTo(0, -24, 16, -30);
+            ctx.quadraticCurveTo(12, -4, 18, 8);
+            ctx.quadraticCurveTo(4, 24, 0, 38);
+            ctx.quadraticCurveTo(-4, 24, -18, 8);
+            ctx.quadraticCurveTo(-12, -4, -16, -30);
+            ctx.fill();
+            ctx.fillStyle = item.accent;
+            ctx.beginPath();
+            ctx.arc(-6, -6, 3.5, 0, Math.PI*2);
+            ctx.arc(6, 10, 3.5, 0, Math.PI*2);
+            ctx.fill();
+            ctx.strokeStyle = '#6f1d1b';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, -30);
+            ctx.quadraticCurveTo(4, -40, 0, -48);
+            ctx.stroke();
+            break;
+          case 'carrot':
+            ctx.fillStyle = item.base;
+            ctx.beginPath();
+            ctx.moveTo(0, -34);
+            ctx.quadraticCurveTo(20, -18, 6, 38);
+            ctx.quadraticCurveTo(-12, -2, 0, -34);
+            ctx.fill();
+            ctx.fillStyle = '#15803d';
+            ctx.beginPath();
+            ctx.moveTo(-10, -32);
+            ctx.lineTo(-2, -48);
+            ctx.lineTo(6, -32);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = item.accent;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-2, -12);
+            ctx.lineTo(4, -8);
+            ctx.moveTo(-4, 0);
+            ctx.lineTo(2, 4);
+            ctx.stroke();
+            break;
+          case 'eggshell':
+            ctx.fillStyle = item.base;
+            ctx.beginPath();
+            ctx.moveTo(-28, 6);
+            ctx.quadraticCurveTo(-20, -26, 0, -26);
+            ctx.quadraticCurveTo(20, -26, 28, 6);
+            ctx.lineTo(18, 0);
+            ctx.lineTo(10, 8);
+            ctx.lineTo(2, 0);
+            ctx.lineTo(-6, 8);
+            ctx.lineTo(-14, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = item.accent;
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+            break;
+          case 'tea':
+          default:
+            ctx.strokeStyle = item.accent;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, -22);
+            ctx.lineTo(0, -42);
+            ctx.stroke();
+            ctx.fillStyle = item.accent;
+            ctx.beginPath();
+            ctx.rect(-10, -54, 20, 12);
+            ctx.fill();
+            ctx.fillStyle = '#fff7ed';
+            ctx.beginPath();
+            ctx.rect(-6, -50, 12, 6);
+            ctx.fill();
+            ctx.fillStyle = item.base;
+            ctx.beginPath();
+            ctx.moveTo(-16, -22);
+            ctx.lineTo(16, -22);
+            ctx.lineTo(20, 18);
+            ctx.lineTo(-20, 18);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = item.accent;
+            ctx.beginPath();
+            ctx.moveTo(-16, -22);
+            ctx.lineTo(-12, 12);
+            ctx.moveTo(16, -22);
+            ctx.lineTo(12, 12);
+            ctx.stroke();
+            break;
+        }
+        ctx.restore();
+      }
+
       function loop(){
         if (!stageSize.width || !stageSize.height){
           requestAnimationFrame(loop);
@@ -411,6 +599,20 @@ add_shortcode('compostaje_gpt', function() {
         const h = stageSize.height;
         ctx.clearRect(0,0,w,h);
 
+        compostSpawnTimer -= 1;
+        if (robotSpeaking){
+          compostSpawnTimer -= 0.5;
+        }
+        fireflies.forEach(f => {
+          f.phase += 0.03 + (robotSpeaking ? 0.02 : 0);
+          f.x += Math.cos(f.phase) * f.drift;
+          if (f.x < -0.1) f.x = 1.1;
+          if (f.x > 1.1) f.x = -0.1;
+          f.y += Math.sin(f.phase*0.7) * f.drift * 0.6;
+          f.y = Math.max(0.05, Math.min(0.6, f.y));
+        });
+        wormPhase += 0.02 + (robotSpeaking ? 0.02 : 0);
+
         // background sun
         const sunX = w*0.12;
         const sunY = h*0.18;
@@ -432,6 +634,19 @@ add_shortcode('compostaje_gpt', function() {
         drawCloud(w*0.72, h*0.18 + (robotSpeaking ? Math.sin(floatPhase*0.01)*6 : 0), 0.9);
         drawCloud(w*0.45, h*0.12 + (robotSpeaking ? Math.cos(floatPhase*0.012)*4 : 0), 0.7);
 
+        fireflies.forEach(f => {
+          const fx = w * f.x;
+          const fy = h * f.y;
+          const glow = (Math.sin(f.phase*3) + 1) / 2;
+          ctx.save();
+          ctx.globalAlpha = 0.35 + glow * f.glow;
+          ctx.fillStyle = '#fff59d';
+          ctx.beginPath();
+          ctx.arc(fx, fy, 2.5 + glow*2.6, 0, Math.PI*2);
+          ctx.fill();
+          ctx.restore();
+        });
+
         const groundY = h*0.78 + (robotSpeaking ? Math.sin(floatPhase*0.02)*3 : 0);
         ctx.fillStyle = '#b8f5a3';
         ctx.beginPath();
@@ -451,6 +666,32 @@ add_shortcode('compostaje_gpt', function() {
         ctx.lineTo(w, groundY);
         ctx.closePath();
         ctx.fill();
+
+        // friendly worm helper
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        const wormBaseY = groundY + 18;
+        ctx.strokeStyle = '#ffadad';
+        ctx.lineWidth = 12;
+        ctx.beginPath();
+        for (let i=0; i<=6; i++){
+          const t = i/6;
+          const wx = w*0.18 + t*w*0.64;
+          const wy = wormBaseY + Math.sin(wormPhase + t*Math.PI*2)*10;
+          if (i===0) ctx.moveTo(wx, wy); else ctx.lineTo(wx, wy);
+        }
+        ctx.stroke();
+        ctx.strokeStyle = '#f07167';
+        ctx.lineWidth = 7;
+        ctx.stroke();
+        ctx.fillStyle = '#1f2933';
+        const headY = wormBaseY + Math.sin(wormPhase)*10;
+        ctx.beginPath();
+        ctx.arc(w*0.18 + 2, headY - 4, 2.5, 0, Math.PI*2);
+        ctx.arc(w*0.18 + 2, headY + 4, 2.5, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
 
         const bob = robotSpeaking ? Math.sin(floatPhase*0.05) * 10 : 0;
         const centerX = w/2;
@@ -582,6 +823,74 @@ add_shortcode('compostaje_gpt', function() {
         ctx.ellipse(centerX, windowY, windowR-8, windowR*0.65-8, 0, 0, Math.PI*2);
         ctx.fill();
 
+        if (compostSpawnTimer <= 0 && compostTypes.length && compostItems.length < 12){
+          const newcomer = createCompostItem();
+          if (newcomer) compostItems.push(newcomer);
+          compostSpawnTimer = robotSpeaking ? 150 : 210;
+        }
+
+        const orbitBase = windowR + 60;
+        compostItems.forEach((item)=>{
+          if (!item) return;
+          item.timer += 1;
+          item.angle += item.speed * (robotSpeaking ? 1.35 : 1);
+          item.bob += item.bobSpeed * (robotSpeaking ? 1.35 : 1);
+          item.rotation += item.rotationSpeed * (robotSpeaking ? 1.2 : 1);
+          if (item.phase === 'orbit'){
+            item.radius += (item.targetRadius - item.radius) * 0.02;
+            if (item.timer > 340){
+              item.targetRadius = Math.max(0.2, item.targetRadius - 0.003);
+            }
+            if (item.timer > 520){
+              item.phase = 'drop';
+              tossHighlight = Math.max(tossHighlight, 0.45);
+            }
+          } else if (item.phase === 'drop'){
+            item.targetRadius = 0.1;
+            item.radius += (item.targetRadius - item.radius) * 0.05;
+          }
+
+          const orbitRadius = orbitBase * item.radius;
+          let targetX = centerX + Math.cos(item.angle) * orbitRadius;
+          let targetY = windowY - 22 + Math.sin(item.angle) * (orbitRadius*0.45) + Math.sin(item.bob)*12;
+
+          if (item.normX !== null && item.normY !== null && item.spawnProgress < 1){
+            item.spawnProgress = Math.min(1, item.spawnProgress + 0.05);
+            const startX = item.normX * w;
+            const startY = item.normY * h;
+            const ease = 1 - Math.pow(1 - item.spawnProgress, 3);
+            targetX = startX + (targetX - startX) * ease;
+            targetY = startY + (targetY - startY) * ease;
+            if (item.spawnProgress >= 0.999){
+              item.normX = null;
+              item.normY = null;
+            }
+          }
+
+          if (item.phase === 'drop'){
+            targetX = centerX + (targetX - centerX) * 0.35;
+            targetY = windowY + (targetY - windowY) * 0.35;
+          }
+
+          item.renderX = targetX;
+          item.renderY = targetY;
+
+          if (item.phase === 'drop'){
+            item.alpha -= 0.015;
+          } else {
+            const bump = item.userSpawn && item.timer < 80 ? 0.08 : 0.05;
+            item.alpha = Math.min(1, item.alpha + bump);
+          }
+
+          item.alpha = Math.max(0, Math.min(1, item.alpha));
+        });
+
+        for (let i = compostItems.length - 1; i >= 0; i--){
+          if (!compostItems[i] || compostItems[i].alpha <= 0.02){
+            compostItems.splice(i,1);
+          }
+        }
+
         ctx.save();
         ctx.beginPath();
         ctx.ellipse(centerX, windowY, windowR-8, windowR*0.65-8, 0, 0, Math.PI*2);
@@ -598,6 +907,25 @@ add_shortcode('compostaje_gpt', function() {
           ctx.fill();
         });
         ctx.restore();
+
+        compostItems.forEach((item)=>{
+          if (!item || typeof item.renderX !== 'number' || typeof item.renderY !== 'number') return;
+          drawCompostable(item, item.renderX, item.renderY);
+        });
+
+        if (tossHighlight > 0){
+          ctx.save();
+          ctx.translate(centerX, windowY);
+          ctx.globalAlpha = Math.min(0.8, tossHighlight * 0.7);
+          ctx.strokeStyle = 'rgba(255,214,102,0.9)';
+          ctx.lineWidth = 6 + tossHighlight*10;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, windowR + 18, windowR*0.65 + 12, 0, 0, Math.PI*2);
+          ctx.stroke();
+          ctx.restore();
+          tossHighlight *= 0.94;
+          if (tossHighlight < 0.02) tossHighlight = 0;
+        }
 
         // sparkles / hearts
         sparks.forEach((spark, index)=>{
@@ -624,6 +952,29 @@ add_shortcode('compostaje_gpt', function() {
       }
 
       requestAnimationFrame(loop);
+    }
+
+    if (stageEl){
+      stageEl.style.cursor = 'pointer';
+      stageEl.addEventListener('pointerdown', (ev)=>{
+        if (!ctx) return;
+        ev.preventDefault();
+        const rect = stageEl.getBoundingClientRect();
+        const normX = (ev.clientX - rect.left) / rect.width;
+        const normY = (ev.clientY - rect.top) / rect.height;
+        tossHighlight = 1;
+        const total = 2 + Math.floor(Math.random()*2);
+        for (let i=0; i<total; i++){
+          const sprinkle = createCompostItem({userSpawn:true, normX, normY});
+          if (sprinkle) compostItems.push(sprinkle);
+        }
+        if (compostItems.length > 16){
+          compostItems.splice(0, compostItems.length - 16);
+        }
+        if (typeof window.gtag === 'function'){
+          window.gtag('event', 'ck_compost_throw', { event_category: 'chatbot' });
+        }
+      });
     }
 
     if ('speechSynthesis' in window){
