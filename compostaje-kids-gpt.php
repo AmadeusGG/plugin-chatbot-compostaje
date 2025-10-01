@@ -187,25 +187,19 @@ add_shortcode('compostaje_gpt', function() {
   .header .text{ flex:1; }
   .title{ margin:4px 0 2px; font-size: clamp(26px,5vw,40px); font-weight:800; }
   .desc{ margin:0; font-size: clamp(18px,3vw,26px); color:#4b5563; }
-  .chips{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; padding:12px; background:var(--mut2); border-bottom:1px solid #eef2f7; overflow-x:auto; scroll-snap-type:x mandatory; }
-  .chip{ scroll-snap-align:start; padding:10px 16px; border-radius:999px; border:1px solid var(--chip-b); background:var(--chip); cursor:pointer; font-size:clamp(18px,2.8vw,24px); color:var(--chip-text); white-space:nowrap; box-shadow:0 2px 0 rgba(0,0,0,.02); transition: background .15s,border-color .15s,transform .08s }
+  .chips{ display:flex; gap:18px; flex-wrap:wrap; justify-content:center; padding:18px; background:var(--mut2); border-bottom:1px solid #eef2f7; }
+  .chip{ padding:12px 22px; border-radius:999px; border:1px solid var(--chip-b); background:var(--chip); cursor:pointer; font-size:clamp(18px,2.8vw,24px); color:var(--chip-text); white-space:nowrap; box-shadow:0 2px 0 rgba(0,0,0,.02); transition: background .15s,border-color .15s,transform .08s }
+  .chip.primary{ background:var(--pri); border-color:var(--pri); color:#fff; }
+  .chip.primary:hover{ filter:brightness(1.05); }
   .chip:hover{ background:#eef2ff; border-color:#c7d2fe; }
   .chip:active{ transform: translateY(1px); }
   .chip[disabled]{ opacity:.5; cursor:not-allowed; }
-  .msgs{ flex:1; display:flex; flex-direction:column; background:#fff; overflow:hidden; }
-  .bot-stage{ position:relative; flex:none; height:280px; border-bottom:1px solid #f3d1dc; background:linear-gradient(180deg,#ffeef6 0%,#fff9d7 100%); display:flex; align-items:center; justify-content:center; padding:12px 18px 20px; }
-  .bot-stage::before{ content:''; position:absolute; inset:14px 18px 60px; background:rgba(255,255,255,0.7); border-radius:26px; box-shadow:0 12px 24px rgba(255,107,107,0.25); z-index:0; transition:transform .6s ease, box-shadow .6s ease; }
+  .stage-wrap{ flex:1; display:flex; background:#fff; }
+  .bot-stage{ position:relative; flex:1; min-height:320px; border-bottom:1px solid #f3d1dc; background:linear-gradient(180deg,#ffeef6 0%,#fff9d7 100%); display:flex; align-items:center; justify-content:center; padding:12px 18px 20px; }
+  .bot-stage::before{ content:''; position:absolute; inset:14px 18px 40px; background:rgba(255,255,255,0.7); border-radius:26px; box-shadow:0 12px 24px rgba(255,107,107,0.25); z-index:0; transition:transform .6s ease, box-shadow .6s ease; }
   .bot-stage.is-speaking::before{ transform:scale(1.02); box-shadow:0 18px 34px rgba(255,107,107,0.45); }
-  .bot-stage.is-saying::before{ box-shadow:0 16px 30px rgba(255,211,59,0.45); }
   canvas.bot-canvas{ position:relative; z-index:1; width:100%; height:100%; display:block; }
-  .bot-subtitle{ position:absolute; left:50%; bottom:20px; transform:translate(-50%,40px); background:#fffbe8; border:2px solid #ffd166; border-radius:18px; padding:10px 16px; font-size:clamp(16px,2.5vw,20px); color:#ff6b6b; font-weight:600; box-shadow:0 6px 16px rgba(0,0,0,0.12); max-width:80%; text-align:center; opacity:0; pointer-events:none; z-index:2; transition:opacity .35s ease, transform .35s ease; }
-  .bot-subtitle.show{ opacity:1; transform:translate(-50%,0); }
-  .msg-log{ flex:1; overflow-y:auto; padding:20px 24px; position:relative; z-index:1; }
-  .row{ display:flex; margin:6px 0; }
-  .row.user{ justify-content:flex-end; }
-  .bubble{ max-width:90%; padding:16px 18px; border-radius:20px; line-height:1.6; white-space:pre-wrap; word-wrap:break-word; font-size:clamp(18px,2.5vw,24px); }
-  .row.user .bubble{ background:var(--us); border:1px solid var(--us-b); }
-  .row.ai .bubble{ background:var(--ai); border:1px solid var(--ai-b); }
+  .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
   .input{ display:flex; gap:12px; padding:16px 20px; border-top:1px solid var(--bd); background:#ffffff; position:sticky; bottom:0; left:0; right:0; }
   .field{ flex:1; padding:16px 20px; border:1px solid #d1d5db; border-radius:16px; font-size:20px; outline:none; background:#fff; color:#0f172a; }
   .field::placeholder{ color:#9aa3ae; }
@@ -221,14 +215,9 @@ add_shortcode('compostaje_gpt', function() {
     .mic.active{ background:#dc2626; }
     .mic svg{ width:28px; height:28px; display:block; fill:currentColor; filter: drop-shadow(0 1px 0 rgba(0,0,0,.45)); }
     .mic[disabled]{ opacity:.6; cursor:not-allowed; }
-    .typing{ display:inline-flex; align-items:center; gap:4px; }
-  .dot{ width:6px; height:6px; border-radius:50%; background:#606770; opacity:.4; animation:blink 1.2s infinite; }
-  .dot:nth-child(2){ animation-delay:.2s; } .dot:nth-child(3){ animation-delay:.4s; }
-  @keyframes blink{ 0%,80%,100%{opacity:.2} 40%{opacity:1} }
   @media (max-width:560px){
-    .chips{ justify-content:flex-start; padding:10px 8px; }
-    .bot-stage{ height:230px; padding:8px 12px 16px; }
-    .bot-subtitle{ bottom:16px; }
+    .chips{ justify-content:center; padding:12px; gap:12px; }
+    .bot-stage{ min-height:230px; padding:8px 12px 16px; }
   }
   .input{ padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
   `;
@@ -256,21 +245,18 @@ add_shortcode('compostaje_gpt', function() {
         ${logoUrl ? `<img src="${logoUrl}" alt="Agente IA Compostaje CEBAS Kids">` : ''}
         <div class="text">
           <div class="title">Agente IA Compostaje CEBAS Kids</div>
-          <p class="desc">Un rincón mágico del CEBAS-CSIC donde una Inteligencia Artificial te enseña a compostar como en un cuento.</p>
+          <p class="desc">Un rincón mágico del CEBAS-CSIC donde una Inteligencia Artificial anima a amigas y amigos a compostar como en un cuento.</p>
         </div>
       </div>
       <div class="chips" id="chips">
-        <button class="chip" data-q="¿Qué cositas puedo echar en mi compostera mágica?">¿Qué cositas puedo echar en mi compostera mágica?</button>
-        <button class="chip" data-q="¿Por qué el compost hace feliz al huerto?">¿Por qué el compost hace feliz al huerto?</button>
-        <button class="chip" data-q="¿Cuánto tarda la poción del compost?">¿Cuánto tarda la poción del compost?</button>
-        <button class="chip" data-q="¿Qué bichitos ayudan en el compost?">¿Qué bichitos ayudan en el compost?</button>
+        <button class="chip primary" id="btnStory">Cuéntame el genial cuento mágico del compost</button>
+        <button class="chip" id="btnAsk">Pregúntame sobre el compost</button>
       </div>
-      <div class="msgs" id="msgs">
+      <div class="stage-wrap" id="stageWrap">
         <div class="bot-stage" id="botStage">
           <canvas class="bot-canvas" id="botCanvas"></canvas>
-          <div class="bot-subtitle" id="botSubtitle"></div>
         </div>
-        <div class="msg-log" id="msgLog"></div>
+        <div class="sr-only" id="liveText" aria-live="polite" aria-atomic="true"></div>
       </div>
       <div class="input">
         <input class="field" id="field" type="text" placeholder="Escribe aquí tu pregunta compostera..." autocomplete="off">
@@ -300,493 +286,456 @@ add_shortcode('compostaje_gpt', function() {
   }
 
   // JS logic isolated
-  const logEl = root.getElementById('msgLog');
   const stageEl = root.getElementById('botStage');
   const canvas = root.getElementById('botCanvas');
-  const subtitleEl = root.getElementById('botSubtitle');
   const fieldEl = root.getElementById('field');
-    const sendBtn = root.getElementById('send');
-    const micBtn  = root.getElementById('mic');
-    const chips   = root.getElementById('chips');
-    let sending = false;
-    let recognition = null;
-    let selectedVoice = null;
-    let robotSpeaking = false;
-    let subtitleTimer = 0;
-    let fallbackSpeechTimeout = null;
-    let fallbackSubtitleTimeout = null;
+  const sendBtn = root.getElementById('send');
+  const micBtn  = root.getElementById('mic');
+  const chips   = root.getElementById('chips');
+  const storyBtn = root.getElementById('btnStory');
+  const askBtn = root.getElementById('btnAsk');
+  const liveEl = root.getElementById('liveText');
+  let sending = false;
+  let recognition = null;
+  let micSupported = false;
+  let selectedVoice = null;
+  let robotSpeaking = false;
+  let animationFrame = 0;
+  let needStaticRedraw = true;
 
-    const ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
-    const stageSize = { width: 0, height: 0 };
-    const crumbs = ctx ? Array.from({length:7}, () => ({ angle: Math.random()*Math.PI*2, radius: 0.28 + Math.random()*0.35, size: 6 + Math.random()*5, color: Math.random() > 0.5 ? '#8ed16f' : '#b47b36' })) : [];
-    const sparks = ctx ? Array.from({length:6}, () => ({ angle: Math.random()*Math.PI*2, distance: 0.65 + Math.random()*0.2, speed: 0.005 + Math.random()*0.01, size: 6 + Math.random()*3, color: Math.random() > 0.5 ? '#ffadad' : '#9bf6ff' })) : [];
-    let blinkTimer = 150;
-    let blinkTarget = 0;
-    let blinkValue = 0;
-    let mouthValue = 0.2;
-    let floatPhase = 0;
+  const ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
+  const stageSize = { width: 0, height: 0 };
+  const crumbs = ctx ? Array.from({length:7}, () => ({ angle: Math.random()*Math.PI*2, radius: 0.28 + Math.random()*0.35, size: 6 + Math.random()*5, color: Math.random() > 0.5 ? '#8ed16f' : '#b47b36' })) : [];
+  const sparks = ctx ? Array.from({length:6}, () => ({ angle: Math.random()*Math.PI*2, distance: 0.65 + Math.random()*0.2, speed: 0.005 + Math.random()*0.01, size: 6 + Math.random()*3, color: Math.random() > 0.5 ? '#ffadad' : '#9bf6ff' })) : [];
+  let blinkTimer = 180;
+  let blinkTarget = 0;
+  let blinkValue = 0;
+  let mouthValue = 0.25;
+  let floatPhase = 0;
 
-    function updateStageStateFallback(){
-      if (ctx) return;
-      const hasSubtitle = subtitleEl && subtitleEl.textContent.trim().length > 0;
-      const showSubtitle = (robotSpeaking || subtitleTimer > 0) && hasSubtitle;
-      stageEl.classList.toggle('is-speaking', robotSpeaking);
-      stageEl.classList.toggle('is-saying', showSubtitle);
-      if (subtitleEl){
-        subtitleEl.classList.toggle('show', showSubtitle);
-      }
+  function announce(text){
+    if (liveEl) {
+      liveEl.textContent = text;
     }
+  }
 
-    function scheduleFallbackHide(ms){
-      if (ctx) return;
-      clearTimeout(fallbackSubtitleTimeout);
-      fallbackSubtitleTimeout = setTimeout(()=>{
-        subtitleTimer = 0;
-        robotSpeaking = false;
-        updateStageStateFallback();
-      }, ms);
-    }
+  function updateStageState(){
+    stageEl.classList.toggle('is-speaking', robotSpeaking);
+  }
 
-    function robotShowSubtitle(text){
-      if (!subtitleEl) return;
-      subtitleEl.textContent = text;
-      subtitleTimer = 260;
-      updateStageStateFallback();
-      scheduleFallbackHide(3200);
-    }
-
-    function robotStartSpeaking(){
-      clearTimeout(fallbackSpeechTimeout);
-      if (!ctx) clearTimeout(fallbackSubtitleTimeout);
+  function robotStartSpeaking(){
+    if (!robotSpeaking) {
       robotSpeaking = true;
-      subtitleTimer = Math.max(subtitleTimer, 260);
-      updateStageStateFallback();
+      needStaticRedraw = true;
+      updateStageState();
     }
+    startLoop();
+  }
 
-    function robotStopSpeaking(){
-      clearTimeout(fallbackSpeechTimeout);
-      if (robotSpeaking) subtitleTimer = Math.max(subtitleTimer, 120);
+  function robotStopSpeaking(){
+    if (robotSpeaking) {
       robotSpeaking = false;
-      updateStageStateFallback();
-      scheduleFallbackHide(2000);
+      needStaticRedraw = true;
+      updateStageState();
+    }
+  }
+
+  function startLoop(){
+    if (!ctx) return;
+    if (!animationFrame) {
+      animationFrame = requestAnimationFrame(loop);
+    }
+  }
+
+  function sanitizeText(text){
+    return (text || '')
+      .replace(/[\u{1F300}-\u{1FAFF}]/gu, ' ')
+      .replace(/[\u{2600}-\u{27BF}]/gu, ' ')
+      .replace(/[:;=8][-^']?[)(D]/g, ' ')
+      .replace(/[\*#_~`><\[\]\(\){}|]/g, ' ')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function speakText(text){
+    const clean = sanitizeText(text);
+    if (!clean) {
+      announce('');
+      return;
+    }
+    announce(clean);
+    if ('speechSynthesis' in window){
+      try { window.speechSynthesis.cancel(); } catch(e){}
+      const utterance = new SpeechSynthesisUtterance(clean);
+      utterance.lang = 'es-ES';
+      utterance.pitch = 1.05;
+      utterance.rate  = 1;
+      if (selectedVoice) utterance.voice = selectedVoice;
+      utterance.onstart = () => robotStartSpeaking();
+      utterance.onend = () => robotStopSpeaking();
+      utterance.oncancel = () => robotStopSpeaking();
+      utterance.onpause = () => robotStopSpeaking();
+      utterance.onresume = () => robotStartSpeaking();
+      try {
+        window.speechSynthesis.speak(utterance);
+      } catch(err){
+        console.error(err);
+        robotStopSpeaking();
+      }
+    } else {
+      robotStopSpeaking();
+    }
+  }
+
+  function setSending(state){
+    sending = state;
+    sendBtn.disabled = state;
+    if (storyBtn) storyBtn.disabled = state;
+    if (askBtn) askBtn.disabled = state;
+    if (micBtn) micBtn.disabled = state || !micSupported;
+    if (chips) {
+      Array.from(chips.querySelectorAll('.chip')).forEach(btn => { btn.disabled = state; });
+    }
+  }
+
+  if (ctx){
+    const drawRoundedRect = (x,y,w,h,r)=>{
+      const rr = Math.min(r, h/2, w/2);
+      ctx.beginPath();
+      ctx.moveTo(x+rr, y);
+      ctx.lineTo(x+w-rr, y);
+      ctx.quadraticCurveTo(x+w, y, x+w, y+rr);
+      ctx.lineTo(x+w, y+h-rr);
+      ctx.quadraticCurveTo(x+w, y+h, x+w-rr, y+h);
+      ctx.lineTo(x+rr, y+h);
+      ctx.quadraticCurveTo(x, y+h, x, y+h-rr);
+      ctx.lineTo(x, y+rr);
+      ctx.quadraticCurveTo(x, y, x+rr, y);
+      ctx.closePath();
+    };
+
+    function resizeRobot(){
+      const rect = stageEl.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = rect.height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      stageSize.width = rect.width;
+      stageSize.height = rect.height;
+      needStaticRedraw = true;
+      startLoop();
     }
 
-    function robotSimulateSpeech(duration){
-      robotStartSpeaking();
-      fallbackSpeechTimeout = setTimeout(()=>{ robotStopSpeaking(); }, duration);
+    resizeRobot();
+    window.addEventListener('resize', resizeRobot);
+    if (window.ResizeObserver){
+      try {
+        const ro = new ResizeObserver(resizeRobot);
+        ro.observe(stageEl);
+      } catch(e){}
     }
 
-    if (ctx){
-      const drawRoundedRect = (x,y,w,h,r)=>{
-        const rr = Math.min(r, h/2, w/2);
-        ctx.beginPath();
-        ctx.moveTo(x+rr, y);
-        ctx.lineTo(x+w-rr, y);
-        ctx.quadraticCurveTo(x+w, y, x+w, y+rr);
-        ctx.lineTo(x+w, y+h-rr);
-        ctx.quadraticCurveTo(x+w, y+h, x+w-rr, y+h);
-        ctx.lineTo(x+rr, y+h);
-        ctx.quadraticCurveTo(x, y+h, x, y+h-rr);
-        ctx.lineTo(x, y+rr);
-        ctx.quadraticCurveTo(x, y, x+rr, y);
-        ctx.closePath();
-      };
+    function drawCloud(x,y,scale){
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(scale, scale);
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.beginPath();
+      ctx.arc(-20, 0, 22, 0, Math.PI*2);
+      ctx.arc(10, -8, 26, 0, Math.PI*2);
+      ctx.arc(36, 6, 20, 0, Math.PI*2);
+      ctx.arc(0, 12, 24, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
 
-      function resizeRobot(){
-        const rect = stageEl.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-        canvas.style.width = rect.width + 'px';
-        canvas.style.height = rect.height + 'px';
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        stageSize.width = rect.width;
-        stageSize.height = rect.height;
+    function loop(){
+      animationFrame = requestAnimationFrame(loop);
+      if (!stageSize.width || !stageSize.height) {
+        return;
       }
 
-      resizeRobot();
-      window.addEventListener('resize', resizeRobot);
-      if (window.ResizeObserver){
-        try {
-          const ro = new ResizeObserver(resizeRobot);
-          ro.observe(stageEl);
-        } catch(e){}
-      }
-
-      function drawCloud(x,y,scale){
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.scale(scale, scale);
-        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx.beginPath();
-        ctx.arc(-20, 0, 22, 0, Math.PI*2);
-        ctx.arc(10, -8, 26, 0, Math.PI*2);
-        ctx.arc(36, 6, 20, 0, Math.PI*2);
-        ctx.arc(0, 12, 24, 0, Math.PI*2);
-        ctx.fill();
-        ctx.restore();
-      }
-
-      function loop(){
-        if (!stageSize.width || !stageSize.height){
-          requestAnimationFrame(loop);
-          return;
-        }
+      if (robotSpeaking){
         floatPhase += 1;
         blinkTimer--;
         if (blinkTimer <= 0){
           blinkTarget = 1;
           blinkTimer = 160 + Math.random()*120;
         }
-        blinkValue += (blinkTarget - blinkValue) * 0.2;
-        if (blinkTarget === 1 && blinkValue > 0.9){
-          blinkTarget = 0;
-        }
-
-        const mouthTarget = robotSpeaking ? 0.7 + 0.15*Math.sin(floatPhase*0.25) : 0.25 + 0.08*Math.sin(floatPhase*0.18);
-        mouthValue += (mouthTarget - mouthValue) * 0.25;
-
-        if (robotSpeaking){
-          subtitleTimer = Math.max(subtitleTimer, 200);
-        } else if (subtitleTimer > 0){
-          subtitleTimer -= 1;
-        }
-
-        const hasSubtitle = subtitleEl && subtitleEl.textContent.trim().length > 0;
-        const showSubtitle = (robotSpeaking || subtitleTimer > 0) && hasSubtitle;
-        stageEl.classList.toggle('is-speaking', robotSpeaking);
-        stageEl.classList.toggle('is-saying', showSubtitle);
-        if (subtitleEl){
-          subtitleEl.classList.toggle('show', showSubtitle);
-        }
-
-        const w = stageSize.width;
-        const h = stageSize.height;
-        ctx.clearRect(0,0,w,h);
-
-        // background sun
-        const sunX = w*0.12;
-        const sunY = h*0.18;
-        ctx.fillStyle = '#ffe066';
-        ctx.beginPath();
-        ctx.arc(sunX, sunY, 26, 0, Math.PI*2);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255,209,102,0.7)';
-        ctx.lineWidth = 3;
-        for (let i=0;i<10;i++){
-          const angle = (Math.PI*2/10)*i + floatPhase*0.02;
-          ctx.beginPath();
-          ctx.moveTo(sunX + Math.cos(angle)*30, sunY + Math.sin(angle)*30);
-          ctx.lineTo(sunX + Math.cos(angle)*44, sunY + Math.sin(angle)*44);
-          ctx.stroke();
-        }
-
-        // clouds
-        drawCloud(w*0.72, h*0.18 + Math.sin(floatPhase*0.01)*6, 0.9);
-        drawCloud(w*0.45, h*0.12 + Math.cos(floatPhase*0.012)*4, 0.7);
-
-        const groundY = h*0.78 + Math.sin(floatPhase*0.02)*3;
-        ctx.fillStyle = '#b8f5a3';
-        ctx.beginPath();
-        ctx.moveTo(0, groundY);
-        ctx.quadraticCurveTo(w*0.25, groundY-24, w*0.5, groundY-10);
-        ctx.quadraticCurveTo(w*0.8, groundY+8, w, groundY-18);
-        ctx.lineTo(w, h);
-        ctx.lineTo(0, h);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#7bd7f0';
-        ctx.beginPath();
-        ctx.moveTo(0, groundY);
-        ctx.bezierCurveTo(w*0.2, groundY-18, w*0.35, groundY-6, w*0.5, groundY-12);
-        ctx.bezierCurveTo(w*0.7, groundY-24, w*0.85, groundY-6, w, groundY-20);
-        ctx.lineTo(w, groundY);
-        ctx.closePath();
-        ctx.fill();
-
-        const bob = Math.sin(floatPhase*0.05) * (robotSpeaking ? 10 : 6);
-        const centerX = w/2;
-        const baseY = groundY - 16 + bob;
-        const bodyW = Math.min(220, w*0.55);
-        const bodyH = Math.min(170, h*0.5);
-        const bodyX = centerX - bodyW/2;
-        const bodyY = baseY - bodyH;
-
-        // shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.08)';
-        ctx.beginPath();
-        ctx.ellipse(centerX, baseY+8, bodyW*0.45, 18, 0, 0, Math.PI*2);
-        ctx.fill();
-
-        // legs
-        ctx.strokeStyle = '#2f8f67';
-        ctx.lineCap = 'round';
-        ctx.lineWidth = 12;
-        ctx.beginPath();
-        ctx.moveTo(centerX - bodyW*0.22, baseY-6);
-        ctx.lineTo(centerX - bodyW*0.22, baseY+10);
-        ctx.moveTo(centerX + bodyW*0.22, baseY-6);
-        ctx.lineTo(centerX + bodyW*0.22, baseY+10);
-        ctx.stroke();
-
-        // body
-        ctx.fillStyle = '#57cc99';
-        ctx.strokeStyle = '#2f8f67';
-        ctx.lineWidth = 6;
-        drawRoundedRect(bodyX, bodyY, bodyW, bodyH, 32);
-        ctx.fill();
-        ctx.stroke();
-
-        // lid
-        const lidH = bodyH*0.18;
-        const lidY = bodyY - lidH*0.45;
-        ctx.fillStyle = '#38a3a5';
-        drawRoundedRect(bodyX + bodyW*0.08, lidY, bodyW*0.84, lidH, 20);
-        ctx.fill();
-
-        // antenna
-        ctx.strokeStyle = '#2f8f67';
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.moveTo(centerX, lidY);
-        ctx.quadraticCurveTo(centerX, lidY-30 - Math.sin(floatPhase*0.09)*6, centerX, lidY-48 - Math.sin(floatPhase*0.09)*6);
-        ctx.stroke();
-        ctx.fillStyle = '#ffd166';
-        ctx.beginPath();
-        ctx.arc(centerX, lidY-56 - Math.sin(floatPhase*0.09)*6, 10, 0, Math.PI*2);
-        ctx.fill();
-
-        // face area
-        const faceH = bodyH*0.42;
-        const faceY = bodyY + bodyH*0.12;
-        const faceX = bodyX + bodyW*0.1;
-        const faceW = bodyW*0.8;
-        ctx.fillStyle = '#9bf6ff';
-        drawRoundedRect(faceX, faceY, faceW, faceH, 24);
-        ctx.fill();
-
-        // cheeks
-        ctx.fillStyle = '#ffcad4';
-        ctx.beginPath();
-        ctx.ellipse(faceX + faceW*0.18, faceY + faceH*0.65, 16, 12, 0, 0, Math.PI*2);
-        ctx.ellipse(faceX + faceW*0.82, faceY + faceH*0.65, 16, 12, 0, 0, Math.PI*2);
-        ctx.fill();
-
-        const eyeOpen = Math.max(0.1, 1 - blinkValue);
-        const eyeW = 24;
-        const eyeH = 18 * eyeOpen;
-        const eyeY = faceY + faceH*0.42;
-        const eyeOffset = faceW*0.26;
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.ellipse(centerX - eyeOffset, eyeY, eyeW, Math.max(6, eyeH), 0, 0, Math.PI*2);
-        ctx.ellipse(centerX + eyeOffset, eyeY, eyeW, Math.max(6, eyeH), 0, 0, Math.PI*2);
-        ctx.fill();
-
-        ctx.fillStyle = '#1f3b4d';
-        const pupilBob = Math.sin(floatPhase*0.05)*3;
-        ctx.beginPath();
-        ctx.ellipse(centerX - eyeOffset, eyeY + pupilBob, 10, Math.max(4, eyeH*0.4), 0, 0, Math.PI*2);
-        ctx.ellipse(centerX + eyeOffset, eyeY + pupilBob, 10, Math.max(4, eyeH*0.4), 0, 0, Math.PI*2);
-        ctx.fill();
-
-        // mouth
-        const mouthW = faceW*0.42;
-        const mouthH = 10 + 28*mouthValue;
-        const mouthY = faceY + faceH*0.72;
-        ctx.fillStyle = '#ff9f1c';
-        drawRoundedRect(centerX - mouthW/2, mouthY - mouthH/2, mouthW, mouthH, 14);
-        ctx.fill();
-        ctx.fillStyle = '#1f3b4d';
-        ctx.fillRect(centerX - mouthW*0.35, mouthY - 3, mouthW*0.7, 6);
-
-        // arms
-        const armY = faceY + faceH*0.78;
-        const wave = Math.sin(floatPhase*0.08) * (robotSpeaking ? 22 : 12);
-        ctx.strokeStyle = '#38a3a5';
-        ctx.lineCap = 'round';
-        ctx.lineWidth = 12;
-        ctx.beginPath();
-        ctx.moveTo(bodyX + 12, armY);
-        ctx.quadraticCurveTo(bodyX - bodyW*0.25, armY - wave - 10, bodyX - bodyW*0.18, armY + wave);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(bodyX + bodyW - 12, armY);
-        ctx.quadraticCurveTo(bodyX + bodyW + bodyW*0.25, armY - wave - 10, bodyX + bodyW + bodyW*0.18, armY + wave);
-        ctx.stroke();
-
-        ctx.fillStyle = '#ff6b6b';
-        ctx.beginPath();
-        ctx.ellipse(bodyX - bodyW*0.2, armY + wave, 14, 14, 0, 0, Math.PI*2);
-        ctx.ellipse(bodyX + bodyW + bodyW*0.2, armY + wave, 14, 14, 0, 0, Math.PI*2);
-        ctx.fill();
-
-        // compost window
-        const windowR = bodyW*0.32;
-        const windowY = bodyY + bodyH*0.7;
-        ctx.fillStyle = '#1f3b4d';
-        ctx.beginPath();
-        ctx.ellipse(centerX, windowY, windowR, windowR*0.65, 0, 0, Math.PI*2);
-        ctx.fill();
-        ctx.fillStyle = '#b2f2bb';
-        ctx.beginPath();
-        ctx.ellipse(centerX, windowY, windowR-8, windowR*0.65-8, 0, 0, Math.PI*2);
-        ctx.fill();
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.ellipse(centerX, windowY, windowR-8, windowR*0.65-8, 0, 0, Math.PI*2);
-        ctx.clip();
-        crumbs.forEach((crumb)=>{
-          crumb.angle += 0.01 + (robotSpeaking ? 0.015 : 0.007);
-          const cx = centerX + Math.cos(crumb.angle) * (windowR-22) * crumb.radius;
-          const cy = windowY + Math.sin(crumb.angle) * (windowR*0.6-18) * crumb.radius;
-          ctx.fillStyle = crumb.color;
-          ctx.beginPath();
-          ctx.ellipse(cx, cy, crumb.size*0.5, crumb.size*0.35, crumb.angle, 0, Math.PI*2);
-          ctx.fill();
-        });
-        ctx.restore();
-
-        // sparkles / hearts
-        sparks.forEach((spark, index)=>{
-          spark.angle += spark.speed * (robotSpeaking ? 1.5 : 1);
-          const radius = (windowR + 30) * spark.distance;
-          const sx = centerX + Math.cos(spark.angle + index) * radius;
-          const sy = windowY - 30 + Math.sin(spark.angle + index) * (radius*0.4);
-          ctx.save();
-          ctx.translate(sx, sy - Math.sin(floatPhase*0.03 + index)*6);
-          const size = spark.size + (robotSpeaking ? 3 : 0);
-          ctx.fillStyle = spark.color;
-          ctx.beginPath();
-          ctx.moveTo(0, 0);
-          ctx.bezierCurveTo(-size*0.6, -size*0.6, -size, size*0.4, 0, size);
-          ctx.bezierCurveTo(size, size*0.4, size*0.6, -size*0.6, 0, 0);
-          ctx.fill();
-          ctx.restore();
-        });
-
-        requestAnimationFrame(loop);
+      } else {
+        blinkTarget = 0;
       }
 
-      requestAnimationFrame(loop);
+      blinkValue += (blinkTarget - blinkValue) * (robotSpeaking ? 0.2 : 0.18);
+      if (robotSpeaking && blinkTarget === 1 && blinkValue > 0.9){
+        blinkTarget = 0;
+      }
+
+      const mouthTarget = robotSpeaking ? 0.72 + 0.18*Math.sin(floatPhase*0.25) : 0.22;
+      mouthValue += (mouthTarget - mouthValue) * 0.2;
+
+      if (!robotSpeaking && !needStaticRedraw) {
+        return;
+      }
+
+      const w = stageSize.width;
+      const h = stageSize.height;
+      ctx.clearRect(0,0,w,h);
+      const dynamicPhase = floatPhase;
+
+      const sunX = w*0.12;
+      const sunY = h*0.18;
+      ctx.fillStyle = '#ffe066';
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, 26, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,209,102,0.7)';
+      ctx.lineWidth = 3;
+      for (let i=0;i<10;i++){
+        const angle = (Math.PI*2/10)*i + (robotSpeaking ? dynamicPhase*0.02 : 0);
+        ctx.beginPath();
+        ctx.moveTo(sunX + Math.cos(angle)*30, sunY + Math.sin(angle)*30);
+        ctx.lineTo(sunX + Math.cos(angle)*44, sunY + Math.sin(angle)*44);
+        ctx.stroke();
+      }
+
+      drawCloud(w*0.72, h*0.18 + (robotSpeaking ? Math.sin(dynamicPhase*0.01)*6 : 0), 0.9);
+      drawCloud(w*0.45, h*0.12 + (robotSpeaking ? Math.cos(dynamicPhase*0.012)*4 : 0), 0.7);
+
+      const groundY = h*0.78 + (robotSpeaking ? Math.sin(dynamicPhase*0.02)*3 : 0);
+      ctx.fillStyle = '#b8f5a3';
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      ctx.quadraticCurveTo(w*0.25, groundY-24, w*0.5, groundY-10);
+      ctx.quadraticCurveTo(w*0.8, groundY+8, w, groundY-18);
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#7bd7f0';
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      ctx.bezierCurveTo(w*0.2, groundY-18, w*0.35, groundY-6, w*0.5, groundY-12);
+      ctx.bezierCurveTo(w*0.7, groundY-24, w*0.85, groundY-6, w, groundY-20);
+      ctx.lineTo(w, groundY);
+      ctx.closePath();
+      ctx.fill();
+
+      const bob = robotSpeaking ? Math.sin(dynamicPhase*0.05) * 10 : 0;
+      const centerX = w/2;
+      const baseY = groundY - 16 + bob;
+      const bodyW = Math.min(220, w*0.55);
+      const bodyH = Math.min(170, h*0.5);
+      const bodyX = centerX - bodyW/2;
+      const bodyY = baseY - bodyH;
+
+      ctx.fillStyle = 'rgba(0,0,0,0.08)';
+      ctx.beginPath();
+      ctx.ellipse(centerX, baseY+8, bodyW*0.45, 18, 0, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#2f8f67';
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 12;
+      ctx.beginPath();
+      ctx.moveTo(centerX - bodyW*0.22, baseY-6);
+      ctx.lineTo(centerX - bodyW*0.22, baseY+10);
+      ctx.moveTo(centerX + bodyW*0.22, baseY-6);
+      ctx.lineTo(centerX + bodyW*0.22, baseY+10);
+      ctx.stroke();
+
+      ctx.fillStyle = '#57cc99';
+      ctx.strokeStyle = '#2f8f67';
+      ctx.lineWidth = 6;
+      drawRoundedRect(bodyX, bodyY, bodyW, bodyH, 32);
+      ctx.fill();
+      ctx.stroke();
+
+      const lidH = bodyH*0.18;
+      const lidY = bodyY - lidH*0.45;
+      ctx.fillStyle = '#38a3a5';
+      drawRoundedRect(bodyX + bodyW*0.08, lidY, bodyW*0.84, lidH, 20);
+      ctx.fill();
+
+      ctx.strokeStyle = '#2f8f67';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(centerX, lidY);
+      ctx.quadraticCurveTo(centerX, lidY-30 - (robotSpeaking ? Math.sin(dynamicPhase*0.09)*6 : 0), centerX, lidY-48 - (robotSpeaking ? Math.sin(dynamicPhase*0.09)*6 : 0));
+      ctx.stroke();
+      ctx.fillStyle = '#ffd166';
+      ctx.beginPath();
+      ctx.arc(centerX, lidY-56 - (robotSpeaking ? Math.sin(dynamicPhase*0.09)*6 : 0), 10, 0, Math.PI*2);
+      ctx.fill();
+
+      const faceH = bodyH*0.42;
+      const faceY = bodyY + bodyH*0.12;
+      const faceX = bodyX + bodyW*0.1;
+      const faceW = bodyW*0.8;
+      ctx.fillStyle = '#9bf6ff';
+      drawRoundedRect(faceX, faceY, faceW, faceH, 24);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffcad4';
+      ctx.beginPath();
+      ctx.ellipse(faceX + faceW*0.18, faceY + faceH*0.65, 16, 12, 0, 0, Math.PI*2);
+      ctx.ellipse(faceX + faceW*0.82, faceY + faceH*0.65, 16, 12, 0, 0, Math.PI*2);
+      ctx.fill();
+
+      const eyeOpen = Math.max(0.1, 1 - blinkValue);
+      const eyeW = 24;
+      const eyeH = 18 * eyeOpen;
+      const eyeY = faceY + faceH*0.42;
+      const eyeOffset = faceW*0.26;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.ellipse(centerX - eyeOffset, eyeY, eyeW, Math.max(6, eyeH), 0, 0, Math.PI*2);
+      ctx.ellipse(centerX + eyeOffset, eyeY, eyeW, Math.max(6, eyeH), 0, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = '#1f3b4d';
+      const pupilBob = robotSpeaking ? Math.sin(dynamicPhase*0.05)*3 : 0;
+      ctx.beginPath();
+      ctx.ellipse(centerX - eyeOffset, eyeY + pupilBob, 10, Math.max(4, eyeH*0.4), 0, 0, Math.PI*2);
+      ctx.ellipse(centerX + eyeOffset, eyeY + pupilBob, 10, Math.max(4, eyeH*0.4), 0, 0, Math.PI*2);
+      ctx.fill();
+
+      const mouthW = faceW*0.42;
+      const mouthH = 10 + 28*mouthValue;
+      const mouthY = faceY + faceH*0.72;
+      ctx.fillStyle = '#ff9f1c';
+      drawRoundedRect(centerX - mouthW/2, mouthY - mouthH/2, mouthW, mouthH, 14);
+      ctx.fill();
+      ctx.fillStyle = '#1f3b4d';
+      ctx.fillRect(centerX - mouthW*0.35, mouthY - 3, mouthW*0.7, 6);
+
+      const armY = faceY + faceH*0.78;
+      const wave = robotSpeaking ? Math.sin(dynamicPhase*0.08) * 22 : 0;
+      ctx.strokeStyle = '#38a3a5';
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 12;
+      ctx.beginPath();
+      ctx.moveTo(bodyX + 12, armY);
+      ctx.quadraticCurveTo(bodyX - bodyW*0.25, armY - wave - 10, bodyX - bodyW*0.18, armY + wave);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(bodyX + bodyW - 12, armY);
+      ctx.quadraticCurveTo(bodyX + bodyW + bodyW*0.25, armY - wave - 10, bodyX + bodyW + bodyW*0.18, armY + wave);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ff6b6b';
+      ctx.beginPath();
+      ctx.ellipse(bodyX - bodyW*0.2, armY + wave, 14, 14, 0, 0, Math.PI*2);
+      ctx.ellipse(bodyX + bodyW + bodyW*0.2, armY + wave, 14, 14, 0, 0, Math.PI*2);
+      ctx.fill();
+
+      const windowR = bodyW*0.32;
+      const windowY = bodyY + bodyH*0.7;
+      ctx.fillStyle = '#1f3b4d';
+      ctx.beginPath();
+      ctx.ellipse(centerX, windowY, windowR, windowR*0.65, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#b2f2bb';
+      ctx.beginPath();
+      ctx.ellipse(centerX, windowY, windowR-8, windowR*0.65-8, 0, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(centerX, windowY, windowR-8, windowR*0.65-8, 0, 0, Math.PI*2);
+      ctx.clip();
+      crumbs.forEach((crumb)=>{
+        if (robotSpeaking){
+          crumb.angle += 0.015 + crumb.radius*0.01;
+        }
+        const cx = centerX + Math.cos(crumb.angle) * (windowR-22) * crumb.radius;
+        const cy = windowY + Math.sin(crumb.angle) * (windowR*0.6-18) * crumb.radius;
+        ctx.fillStyle = crumb.color;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, crumb.size*0.5, crumb.size*0.35, crumb.angle, 0, Math.PI*2);
+        ctx.fill();
+      });
+      ctx.restore();
+
+      sparks.forEach((spark, index)=>{
+        if (robotSpeaking){
+          spark.angle += spark.speed * 1.5;
+        }
+        const radius = (windowR + 30) * spark.distance;
+        const sx = centerX + Math.cos(spark.angle + index) * radius;
+        const sy = windowY - 30 + Math.sin(spark.angle + index) * (radius*0.4);
+        ctx.save();
+        ctx.translate(sx, sy - (robotSpeaking ? Math.sin(dynamicPhase*0.03 + index)*6 : 0));
+        const size = robotSpeaking ? spark.size + 3 : spark.size;
+        ctx.fillStyle = spark.color;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(-size*0.6, -size*0.6, -size, size*0.4, 0, size);
+        ctx.bezierCurveTo(size, size*0.4, size*0.6, -size*0.6, 0, 0);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      needStaticRedraw = robotSpeaking;
     }
 
-    if ('speechSynthesis' in window){
-      const pickVoice = () => {
-        const voices = window.speechSynthesis.getVoices();
-        const prefer = [
-          'Google español de España',
-          'Google español',
-          'Microsoft Helena Desktop - Spanish (Spain)'
-        ];
-        selectedVoice = voices.find(v => prefer.includes(v.name)) ||
-                        voices.find(v => v.name && v.name.toLowerCase().includes('google') && v.lang === 'es-ES') ||
-                        voices.find(v => v.lang === 'es-ES') ||
-                        voices.find(v => v.lang && v.lang.startsWith('es')) || null;
-      };
-      pickVoice();
-      window.speechSynthesis.onvoiceschanged = pickVoice;
-    }
-
-  // History
-  let history = [];
-  try { const saved = localStorage.getItem('ckMessages'); if(saved) history = JSON.parse(saved); } catch(e){}
-  if (history.length) { history.forEach(m => render(m.role, m.content)); scroll(); }
-  else {
-    typingOn();
-    setTimeout(function(){
-      typingOff();
-      const welcome = '¡Hola, peque aventurerx del compost! Soy tu amigue del CEBAS-CSIC. Juntxs haremos magia con las cáscaras y las hojas para alimentar a las plantas. ¿Qué te gustaría saber?';
-      history.push({role:'assistant',content:welcome});
-      render('ai', welcome, false);
-      persist();
-      scroll();
-    },2000);
+    startLoop();
   }
 
-  function persist(){ try{ localStorage.setItem('ckMessages', JSON.stringify(history)); } catch(e){} }
-    function scroll(){ logEl.scrollTop = logEl.scrollHeight; }
-    function setSending(state){ sending = state; sendBtn.disabled = state; Array.from(chips.children).forEach(b=>b.disabled=state); }
-    function typingOn(){ render('ai','',true); scroll(); }
-    function typingOff(){ Array.from(logEl.querySelectorAll('[data-typing="1"]')).forEach(n=>n.remove()); }
+  if ('speechSynthesis' in window){
+    const pickVoice = () => {
+      const voices = window.speechSynthesis.getVoices();
+      const prefer = [
+        'Google español de España',
+        'Google español',
+        'Microsoft Helena Desktop - Spanish (Spain)'
+      ];
+      selectedVoice = voices.find(v => prefer.includes(v.name)) ||
+                      voices.find(v => v.name && v.name.toLowerCase().includes('google') && v.lang === 'es-ES') ||
+                      voices.find(v => v.lang === 'es-ES') ||
+                      voices.find(v => v.lang && v.lang.startsWith('es')) || null;
+    };
+    pickVoice();
+    window.speechSynthesis.onvoiceschanged = pickVoice;
+  }
 
+  const history = [];
 
-    function typeText(el, text){
-      let i = 0;
-      const speed = 27;
-      (function add(){
-        el.textContent += text.charAt(i);
-        i++; scroll();
-        if(i < text.length){ setTimeout(add, speed); }
-      })();
+  function pushHistory(role, content){
+    history.push({role, content});
+    if (history.length > 16) {
+      history.splice(0, history.length - 16);
     }
+  }
 
-    function speakAndType(el, text){
-      const clean = text
-        .replace(/[\u{1F300}-\u{1FAFF}]/gu, '')
-        .replace(/[\*#_~`>\[\]\(\){}]/g, '')
-        .replace(/<[^>]*>/g, '');
-      const preview = clean.replace(/\s+/g, ' ').trim();
-      if (preview){
-        const shown = preview.length > 160 ? preview.slice(0,157) + '…' : preview;
-        robotShowSubtitle(shown);
+  const storyText = 'Había una vez una amiga y un amigo que cuidaban un jardín curioso. Un día encontraron una caja brillante en el huerto y dentro dormían lombrices tejedoras. Les contaron que, si mezclaban cáscaras, hojas y agua, crearían un tesoro nutritivo. La amiga y el amigo removieron con paciencia, cantaron a las lombrices y esperaron. Pronto apareció un compost dorado que olía a bosque. Lo esparcieron alrededor de las plantas y brotaron flores gigantes que saludaban diciendo gracias. Así aprendieron que cada resto tiene magia recicladora.';
+  const welcomeText = 'Hola amiga y amigo del compost. Elige si quieres escuchar el cuento mágico o hacerme una pregunta para vivir esta aventura compostera.';
+
+  pushHistory('assistant', welcomeText);
+  setTimeout(() => speakText(welcomeText), 800);
+
+  if (storyBtn){
+    storyBtn.addEventListener('click', () => {
+      pushHistory('assistant', storyText);
+      speakText(storyText);
+      if (typeof window.gtag === 'function') {
+        window.gtag('event', 'ck_chat_story', { event_category: 'chatbot' });
       }
+    });
+  }
 
-      if ('speechSynthesis' in window){
-        robotStopSpeaking();
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance((clean || text || '').trim());
-        utterance.lang = 'es-ES';
-        utterance.pitch = 1.1;
-        utterance.rate  = 1;
-        if (selectedVoice) utterance.voice = selectedVoice;
-        utterance.onstart = () => { robotStartSpeaking(); };
-        utterance.onend = () => { robotStopSpeaking(); };
-        utterance.oncancel = () => { robotStopSpeaking(); };
-        utterance.onpause = () => { robotStopSpeaking(); };
-        utterance.onresume = () => { robotStartSpeaking(); };
-        try {
-          window.speechSynthesis.speak(utterance);
-        } catch(e){
-          if (preview){
-            robotStopSpeaking();
-            robotSimulateSpeech(Math.min(7000, Math.max(1800, preview.length * 55)));
-          }
-        }
-      } else if (preview){
-        robotStopSpeaking();
-        robotSimulateSpeech(Math.min(7000, Math.max(1800, preview.length * 55)));
-      }
-
-      typeText(el, text);
-    }
-
-
-    function render(role, text, typing=false){
-      const row = document.createElement('div');
-      row.className = 'row ' + (role==='user'?'user':'ai');
-      const bubble = document.createElement('div');
-      bubble.className = 'bubble';
-      if (typing){
-        row.dataset.typing = '1';
-        const t = document.createElement('div');
-        t.className = 'typing';
-        t.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
-        bubble.appendChild(t);
-      } else {
-        const txt = document.createElement('div');
-        bubble.appendChild(txt);
-          if(role === 'ai'){
-            speakAndType(txt, text);
-          } else {
-            txt.textContent = text;
-          }
-      }
-      row.appendChild(bubble);
-      logEl.appendChild(row);
-    }
+  if (askBtn){
+    askBtn.addEventListener('click', () => {
+      const prompt = 'Amiga y amigo, pregúntame lo que quieras sobre el compost y responderé con magia científica.';
+      pushHistory('assistant', prompt);
+      speakText(prompt);
+      fieldEl.focus();
+    });
+  }
 
   async function send(txt){
     if(!txt || sending) return;
@@ -794,10 +743,8 @@ add_shortcode('compostaje_gpt', function() {
     if (typeof window.gtag === 'function') {
       window.gtag('event', 'ck_chat_message', { event_category: 'chatbot' });
     }
-    history.push({role:'user',content:txt});
-    render('user', txt);
+    pushHistory('user', txt);
     fieldEl.value='';
-    typingOn();
     try{
       const res = await fetch(ajaxUrl, {
         method:'POST',
@@ -806,27 +753,24 @@ add_shortcode('compostaje_gpt', function() {
         body: JSON.stringify({messages: history})
       });
       const data = await res.json();
-      typingOff();
       const reply = (data && data.reply) ? data.reply : (data && data.error ? data.error : 'No se pudo obtener respuesta.');
-      history.push({role:'assistant',content:reply});
-      render('ai', reply);
+      pushHistory('assistant', reply);
+      speakText(reply);
       if (typeof window.gtag === 'function') {
         window.gtag('event', 'ck_chat_reply', { event_category: 'chatbot' });
       }
     }catch(err){
-      typingOff();
-      const msg = 'Ups, parece que las lombrices están dormidas. ¡Inténtalo otra vez!';
-      history.push({role:'assistant',content:msg});
-      render('ai', msg);
+      const msg = 'Ups, amigas y amigos, parece que las lombrices están dormidas. Inténtalo otra vez.';
+      pushHistory('assistant', msg);
+      speakText(msg);
       console.error(err);
       if (typeof window.gtag === 'function') {
         window.gtag('event', 'ck_chat_error', { event_category: 'chatbot' });
       }
     }finally{
-      persist(); scroll(); setSending(false);
+      setSending(false);
     }
   }
-
   if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SR();
@@ -838,6 +782,8 @@ add_shortcode('compostaje_gpt', function() {
     };
     recognition.onstart = () => { micBtn.classList.add('active'); };
     recognition.onend = () => { micBtn.classList.remove('active'); };
+    micSupported = true;
+    micBtn.disabled = false;
   } else {
     micBtn.disabled = true;
   }
@@ -845,10 +791,6 @@ add_shortcode('compostaje_gpt', function() {
   sendBtn.addEventListener('click', ()=> send(fieldEl.value.trim()));
   micBtn.addEventListener('click', ()=>{ if(recognition) recognition.start(); });
   fieldEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(fieldEl.value.trim()); } });
-  chips.addEventListener('click', (e)=>{
-    const b = e.target.closest('.chip'); if(!b) return;
-    const q = b.getAttribute('data-q'); if(q) send(q);
-  });
 
   // Ajuste de altura ya manejado con flexbox
 })();
@@ -888,7 +830,7 @@ function ck_gpt_chat() {
 
     $system_prompt = "Eres \"Compostaje para Peques\", un personaje cuentacuentos del CEBAS-CSIC experto en compostaje y reciclaje. "
         . "Tu misión es enseñar, con un tono alegre y mágico, cómo transformar los residuos orgánicos en abono de forma segura y divertida. "
-        . "Habla como en un cuento, usando un lenguaje muy sencillo, comparaciones juguetonas y ejemplos cotidianos, con lenguaje inclusivo dirigido a niñas, niños y niñes. "
+        . "Habla como en un cuento, usando un lenguaje muy sencillo, comparaciones juguetonas y ejemplos cotidianos, nombrando siempre en femenino y masculino (por ejemplo amiga y amigo) y evitando símbolos o emoticonos. "
         . "Si la pregunta no está relacionada con el compostaje, guía la conversación de vuelta al compost. "
         . "Anima siempre a cuidar el medio ambiente y a pedir ayuda a una persona adulta cuando sea necesario. "
         . "Basate en la información divulgativa del CEBAS (https://www.cebas.csic.es/general_spain/presentacion.html) y no proporciones enlaces ni datos de contacto.";
