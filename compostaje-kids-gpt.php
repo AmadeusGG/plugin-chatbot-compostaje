@@ -287,8 +287,8 @@ add_shortcode('compostaje_gpt', function() {
 
   const ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
   const stageSize = { width: 0, height: 0 };
-  const crumbs = ctx ? Array.from({length:7}, () => ({ angle: Math.random()*Math.PI*2, radius: 0.28 + Math.random()*0.35, size: 6 + Math.random()*5, color: Math.random() > 0.5 ? '#8ed16f' : '#b47b36' })) : [];
-  const sparks = ctx ? Array.from({length:6}, () => ({ angle: Math.random()*Math.PI*2, distance: 0.65 + Math.random()*0.2, speed: 0.005 + Math.random()*0.01, size: 6 + Math.random()*3, color: Math.random() > 0.5 ? '#ffadad' : '#9bf6ff' })) : [];
+  const crumbs = ctx ? Array.from({length:7}, () => ({ angle: Math.random()*Math.PI*2, radius: 0.28 + Math.random()*0.35, baseSize: 6 + Math.random()*5, color: Math.random() > 0.5 ? '#8ed16f' : '#b47b36' })) : [];
+  const sparks = ctx ? Array.from({length:6}, () => ({ angle: Math.random()*Math.PI*2, distance: 0.65 + Math.random()*0.2, speed: 0.005 + Math.random()*0.01, baseSize: 6 + Math.random()*3, color: Math.random() > 0.5 ? '#ffadad' : '#9bf6ff' })) : [];
   const compostTypes = ctx ? [
     { type: 'leaf', base: '#6fcf97', accent: '#4cb944' },
     { type: 'banana', base: '#ffdd67', accent: '#f4a261' },
@@ -319,6 +319,7 @@ add_shortcode('compostaje_gpt', function() {
   let compostSpawnTimer = 0;
   let tossHighlight = 0;
   let wormPhase = 0;
+  let stageScale = 1;
 
   const createCompostItem = (opts={}) => {
     const data = compostTypes[Math.floor(Math.random()*compostTypes.length)];
@@ -432,7 +433,8 @@ add_shortcode('compostaje_gpt', function() {
         ctx.translate(x, y);
         ctx.globalAlpha = Math.max(0, Math.min(1, item.alpha));
         const wobble = 1 + 0.06*Math.sin(item.bob*2);
-        ctx.scale(item.scale * wobble, item.scale * wobble);
+        const itemScale = item.scale * wobble * stageScale;
+        ctx.scale(itemScale, itemScale);
         ctx.rotate(item.rotation);
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
@@ -597,6 +599,8 @@ add_shortcode('compostaje_gpt', function() {
 
         const w = stageSize.width;
         const h = stageSize.height;
+        const baseMeasure = Math.max(1, Math.min(w, h));
+        stageScale = Math.min(1.8, Math.max(0.9, baseMeasure / 320));
         ctx.clearRect(0,0,w,h);
 
         compostSpawnTimer -= 1;
@@ -822,58 +826,59 @@ add_shortcode('compostaje_gpt', function() {
         ctx.save();
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        const wormBaseY = groundY + 18;
+        const wormBaseY = groundY + 18*stageScale;
         ctx.strokeStyle = '#ffadad';
-        ctx.lineWidth = 12;
+        ctx.lineWidth = 12*stageScale;
         ctx.beginPath();
         for (let i=0; i<=6; i++){
           const t = i/6;
           const wx = w*0.18 + t*w*0.64;
-          const wy = wormBaseY + Math.sin(wormPhase + t*Math.PI*2)*10;
+          const wy = wormBaseY + Math.sin(wormPhase + t*Math.PI*2)*(10*stageScale);
           if (i===0) ctx.moveTo(wx, wy); else ctx.lineTo(wx, wy);
         }
         ctx.stroke();
         ctx.strokeStyle = '#f07167';
-        ctx.lineWidth = 7;
+        ctx.lineWidth = 7*stageScale;
         ctx.stroke();
         ctx.fillStyle = '#1f2933';
-        const headY = wormBaseY + Math.sin(wormPhase)*10;
+        const headY = wormBaseY + Math.sin(wormPhase)*(10*stageScale);
         ctx.beginPath();
-        ctx.arc(w*0.18 + 2, headY - 4, 2.5, 0, Math.PI*2);
-        ctx.arc(w*0.18 + 2, headY + 4, 2.5, 0, Math.PI*2);
+        ctx.arc(w*0.18 + 2*stageScale, headY - 4*stageScale, 2.5*stageScale, 0, Math.PI*2);
+        ctx.arc(w*0.18 + 2*stageScale, headY + 4*stageScale, 2.5*stageScale, 0, Math.PI*2);
         ctx.fill();
         ctx.restore();
 
-        const bob = robotSpeaking ? Math.sin(floatPhase*0.05) * 10 : 0;
+        const bob = robotSpeaking ? Math.sin(floatPhase*0.05) * 10 * stageScale : 0;
         const centerX = w/2;
-        const baseY = groundY - 16 + bob;
-        const bodyW = Math.min(220, w*0.55);
-        const bodyH = Math.min(170, h*0.5);
+        const baseY = groundY - 16*stageScale + bob;
+        const bodyW = Math.min(Math.max(180, Math.min(w*0.78, h*0.9)), w*0.95);
+        const bodyH = Math.min(bodyW * 0.75, h*0.82);
         const bodyX = centerX - bodyW/2;
         const bodyY = baseY - bodyH;
+        const robotStrokeScale = bodyW / 220;
 
         // shadow
         ctx.fillStyle = 'rgba(0,0,0,0.08)';
         ctx.beginPath();
-        ctx.ellipse(centerX, baseY+8, bodyW*0.45, 18, 0, 0, Math.PI*2);
+        ctx.ellipse(centerX, baseY + 8*robotStrokeScale, bodyW*0.45, 18*robotStrokeScale, 0, 0, Math.PI*2);
         ctx.fill();
 
         // legs
         ctx.strokeStyle = '#2f8f67';
         ctx.lineCap = 'round';
-        ctx.lineWidth = 12;
+        ctx.lineWidth = 12*robotStrokeScale;
         ctx.beginPath();
-        ctx.moveTo(centerX - bodyW*0.22, baseY-6);
-        ctx.lineTo(centerX - bodyW*0.22, baseY+10);
-        ctx.moveTo(centerX + bodyW*0.22, baseY-6);
-        ctx.lineTo(centerX + bodyW*0.22, baseY+10);
+        ctx.moveTo(centerX - bodyW*0.22, baseY - 6*robotStrokeScale);
+        ctx.lineTo(centerX - bodyW*0.22, baseY + 10*robotStrokeScale);
+        ctx.moveTo(centerX + bodyW*0.22, baseY - 6*robotStrokeScale);
+        ctx.lineTo(centerX + bodyW*0.22, baseY + 10*robotStrokeScale);
         ctx.stroke();
 
         // body
         ctx.fillStyle = '#57cc99';
         ctx.strokeStyle = '#2f8f67';
-        ctx.lineWidth = 6;
-        drawRoundedRect(bodyX, bodyY, bodyW, bodyH, 32);
+        ctx.lineWidth = 6*robotStrokeScale;
+        drawRoundedRect(bodyX, bodyY, bodyW, bodyH, 32*robotStrokeScale);
         ctx.fill();
         ctx.stroke();
 
@@ -881,20 +886,20 @@ add_shortcode('compostaje_gpt', function() {
         const lidH = bodyH*0.18;
         const lidY = bodyY - lidH*0.45;
         ctx.fillStyle = '#38a3a5';
-        drawRoundedRect(bodyX + bodyW*0.08, lidY, bodyW*0.84, lidH, 20);
+        drawRoundedRect(bodyX + bodyW*0.08, lidY, bodyW*0.84, lidH, 20*robotStrokeScale);
         ctx.fill();
 
         // antenna
         ctx.strokeStyle = '#2f8f67';
-        ctx.lineWidth = 5;
+        ctx.lineWidth = 5*robotStrokeScale;
         ctx.beginPath();
-        const antennaWave = robotSpeaking ? Math.sin(floatPhase*0.09)*6 : 0;
+        const antennaWave = robotSpeaking ? Math.sin(floatPhase*0.09)*(6*robotStrokeScale) : 0;
         ctx.moveTo(centerX, lidY);
-        ctx.quadraticCurveTo(centerX, lidY-30 - antennaWave, centerX, lidY-48 - antennaWave);
+        ctx.quadraticCurveTo(centerX, lidY - 30*robotStrokeScale - antennaWave, centerX, lidY - 48*robotStrokeScale - antennaWave);
         ctx.stroke();
         ctx.fillStyle = '#ffd166';
         ctx.beginPath();
-        ctx.arc(centerX, lidY-56 - antennaWave, 10, 0, Math.PI*2);
+        ctx.arc(centerX, lidY - 56*robotStrokeScale - antennaWave, 10*robotStrokeScale, 0, Math.PI*2);
         ctx.fill();
 
         // face area
@@ -903,63 +908,65 @@ add_shortcode('compostaje_gpt', function() {
         const faceX = bodyX + bodyW*0.1;
         const faceW = bodyW*0.8;
         ctx.fillStyle = '#9bf6ff';
-        drawRoundedRect(faceX, faceY, faceW, faceH, 24);
+        drawRoundedRect(faceX, faceY, faceW, faceH, 24*robotStrokeScale);
         ctx.fill();
 
         // cheeks
         ctx.fillStyle = '#ffcad4';
         ctx.beginPath();
-        ctx.ellipse(faceX + faceW*0.18, faceY + faceH*0.65, 16, 12, 0, 0, Math.PI*2);
-        ctx.ellipse(faceX + faceW*0.82, faceY + faceH*0.65, 16, 12, 0, 0, Math.PI*2);
+        ctx.ellipse(faceX + faceW*0.18, faceY + faceH*0.65, 16*robotStrokeScale, 12*robotStrokeScale, 0, 0, Math.PI*2);
+        ctx.ellipse(faceX + faceW*0.82, faceY + faceH*0.65, 16*robotStrokeScale, 12*robotStrokeScale, 0, 0, Math.PI*2);
         ctx.fill();
 
         const eyeOpen = Math.max(0.1, 1 - blinkValue);
-        const eyeW = 24;
-        const eyeH = 18 * eyeOpen;
+        const eyeW = 24*robotStrokeScale;
+        const baseEyeH = 18*robotStrokeScale;
+        const eyeH = baseEyeH * eyeOpen;
         const eyeY = faceY + faceH*0.42;
         const eyeOffset = faceW*0.26;
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.ellipse(centerX - eyeOffset, eyeY, eyeW, Math.max(6, eyeH), 0, 0, Math.PI*2);
-        ctx.ellipse(centerX + eyeOffset, eyeY, eyeW, Math.max(6, eyeH), 0, 0, Math.PI*2);
+        ctx.ellipse(centerX - eyeOffset, eyeY, eyeW, Math.max(6*robotStrokeScale, eyeH), 0, 0, Math.PI*2);
+        ctx.ellipse(centerX + eyeOffset, eyeY, eyeW, Math.max(6*robotStrokeScale, eyeH), 0, 0, Math.PI*2);
         ctx.fill();
 
         ctx.fillStyle = '#1f3b4d';
-        const pupilBob = robotSpeaking ? Math.sin(floatPhase*0.05)*3 : 0;
+        const pupilBob = robotSpeaking ? Math.sin(floatPhase*0.05)*(3*robotStrokeScale) : 0;
         ctx.beginPath();
-        ctx.ellipse(centerX - eyeOffset, eyeY + pupilBob, 10, Math.max(4, eyeH*0.4), 0, 0, Math.PI*2);
-        ctx.ellipse(centerX + eyeOffset, eyeY + pupilBob, 10, Math.max(4, eyeH*0.4), 0, 0, Math.PI*2);
+        ctx.ellipse(centerX - eyeOffset, eyeY + pupilBob, 10*robotStrokeScale, Math.max(4*robotStrokeScale, eyeH*0.4), 0, 0, Math.PI*2);
+        ctx.ellipse(centerX + eyeOffset, eyeY + pupilBob, 10*robotStrokeScale, Math.max(4*robotStrokeScale, eyeH*0.4), 0, 0, Math.PI*2);
         ctx.fill();
 
         // mouth
         const mouthW = faceW*0.42;
-        const mouthH = 10 + 28*mouthValue;
+        const mouthH = (10 + 28*mouthValue) * robotStrokeScale;
         const mouthY = faceY + faceH*0.72;
         ctx.fillStyle = '#ff9f1c';
-        drawRoundedRect(centerX - mouthW/2, mouthY - mouthH/2, mouthW, mouthH, 14);
+        drawRoundedRect(centerX - mouthW/2, mouthY - mouthH/2, mouthW, mouthH, 14*robotStrokeScale);
         ctx.fill();
         ctx.fillStyle = '#1f3b4d';
-        ctx.fillRect(centerX - mouthW*0.35, mouthY - 3, mouthW*0.7, 6);
+        ctx.fillRect(centerX - mouthW*0.35, mouthY - 3*robotStrokeScale, mouthW*0.7, 6*robotStrokeScale);
 
         // arms
         const armY = faceY + faceH*0.78;
-        const wave = robotSpeaking ? Math.sin(floatPhase*0.08) * 22 : 0;
+        const wave = robotSpeaking ? Math.sin(floatPhase*0.08) * (22*robotStrokeScale) : 0;
         ctx.strokeStyle = '#38a3a5';
         ctx.lineCap = 'round';
-        ctx.lineWidth = 12;
+        ctx.lineWidth = 12*robotStrokeScale;
         ctx.beginPath();
-        ctx.moveTo(bodyX + 12, armY);
-        ctx.quadraticCurveTo(bodyX - bodyW*0.25, armY - wave - 10, bodyX - bodyW*0.18, armY + wave);
+        const armInset = bodyW*0.05;
+        ctx.moveTo(bodyX + armInset, armY);
+        ctx.quadraticCurveTo(bodyX - bodyW*0.25, armY - wave - 10*robotStrokeScale, bodyX - bodyW*0.18, armY + wave);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(bodyX + bodyW - 12, armY);
-        ctx.quadraticCurveTo(bodyX + bodyW + bodyW*0.25, armY - wave - 10, bodyX + bodyW + bodyW*0.18, armY + wave);
+        ctx.moveTo(bodyX + bodyW - armInset, armY);
+        ctx.quadraticCurveTo(bodyX + bodyW + bodyW*0.25, armY - wave - 10*robotStrokeScale, bodyX + bodyW + bodyW*0.18, armY + wave);
         ctx.stroke();
 
         ctx.fillStyle = '#ff6b6b';
         ctx.beginPath();
-        ctx.ellipse(bodyX - bodyW*0.2, armY + wave, 14, 14, 0, 0, Math.PI*2);
-        ctx.ellipse(bodyX + bodyW + bodyW*0.2, armY + wave, 14, 14, 0, 0, Math.PI*2);
+        ctx.ellipse(bodyX - bodyW*0.2, armY + wave, 14*robotStrokeScale, 14*robotStrokeScale, 0, 0, Math.PI*2);
+        ctx.ellipse(bodyX + bodyW + bodyW*0.2, armY + wave, 14*robotStrokeScale, 14*robotStrokeScale, 0, 0, Math.PI*2);
         ctx.fill();
 
         // compost window
@@ -969,9 +976,11 @@ add_shortcode('compostaje_gpt', function() {
         ctx.beginPath();
         ctx.ellipse(centerX, windowY, windowR, windowR*0.65, 0, 0, Math.PI*2);
         ctx.fill();
+        const innerWindowRX = Math.max(windowR - 8*robotStrokeScale, windowR*0.45);
+        const innerWindowRY = Math.max(windowR*0.65 - 8*robotStrokeScale, windowR*0.35);
         ctx.fillStyle = '#b2f2bb';
         ctx.beginPath();
-        ctx.ellipse(centerX, windowY, windowR-8, windowR*0.65-8, 0, 0, Math.PI*2);
+        ctx.ellipse(centerX, windowY, innerWindowRX, innerWindowRY, 0, 0, Math.PI*2);
         ctx.fill();
 
         if (compostSpawnTimer <= 0 && compostTypes.length && compostItems.length < 12){
@@ -980,7 +989,7 @@ add_shortcode('compostaje_gpt', function() {
           compostSpawnTimer = robotSpeaking ? 150 : 210;
         }
 
-        const orbitBase = windowR + 60;
+        const orbitBase = windowR + 60*robotStrokeScale;
         compostItems.forEach((item)=>{
           if (!item) return;
           item.timer += 1;
@@ -1003,7 +1012,7 @@ add_shortcode('compostaje_gpt', function() {
 
           const orbitRadius = orbitBase * item.radius;
           let targetX = centerX + Math.cos(item.angle) * orbitRadius;
-          let targetY = windowY - 22 + Math.sin(item.angle) * (orbitRadius*0.45) + Math.sin(item.bob)*12;
+          let targetY = windowY - 22*robotStrokeScale + Math.sin(item.angle) * (orbitRadius*0.45) + Math.sin(item.bob)*(12*robotStrokeScale);
 
           if (item.normX !== null && item.normY !== null && item.spawnProgress < 1){
             item.spawnProgress = Math.min(1, item.spawnProgress + 0.05);
@@ -1044,17 +1053,18 @@ add_shortcode('compostaje_gpt', function() {
 
         ctx.save();
         ctx.beginPath();
-        ctx.ellipse(centerX, windowY, windowR-8, windowR*0.65-8, 0, 0, Math.PI*2);
+        ctx.ellipse(centerX, windowY, innerWindowRX, innerWindowRY, 0, 0, Math.PI*2);
         ctx.clip();
         crumbs.forEach((crumb)=>{
           if (robotSpeaking){
             crumb.angle += 0.025;
           }
-          const cx = centerX + Math.cos(crumb.angle) * (windowR-22) * crumb.radius;
-          const cy = windowY + Math.sin(crumb.angle) * (windowR*0.6-18) * crumb.radius;
+          const cx = centerX + Math.cos(crumb.angle) * (windowR - 22*robotStrokeScale) * crumb.radius;
+          const cy = windowY + Math.sin(crumb.angle) * (windowR*0.6 - 18*robotStrokeScale) * crumb.radius;
           ctx.fillStyle = crumb.color;
           ctx.beginPath();
-          ctx.ellipse(cx, cy, crumb.size*0.5, crumb.size*0.35, crumb.angle, 0, Math.PI*2);
+          const crumbScale = crumb.baseSize * stageScale;
+          ctx.ellipse(cx, cy, crumbScale*0.5, crumbScale*0.35, crumb.angle, 0, Math.PI*2);
           ctx.fill();
         });
         ctx.restore();
@@ -1069,9 +1079,9 @@ add_shortcode('compostaje_gpt', function() {
           ctx.translate(centerX, windowY);
           ctx.globalAlpha = Math.min(0.8, tossHighlight * 0.7);
           ctx.strokeStyle = 'rgba(255,214,102,0.9)';
-          ctx.lineWidth = 6 + tossHighlight*10;
+          ctx.lineWidth = (6 + tossHighlight*10) * robotStrokeScale;
           ctx.beginPath();
-          ctx.ellipse(0, 0, windowR + 18, windowR*0.65 + 12, 0, 0, Math.PI*2);
+          ctx.ellipse(0, 0, windowR + 18*robotStrokeScale, windowR*0.65 + 12*robotStrokeScale, 0, 0, Math.PI*2);
           ctx.stroke();
           ctx.restore();
           tossHighlight *= 0.94;
@@ -1083,13 +1093,13 @@ add_shortcode('compostaje_gpt', function() {
           if (robotSpeaking){
             spark.angle += spark.speed * 1.5;
           }
-          const radius = (windowR + 30) * spark.distance;
+          const radius = (windowR + 30*robotStrokeScale) * spark.distance;
           const sx = centerX + Math.cos(spark.angle + index) * radius;
-          const sy = windowY - 30 + Math.sin(spark.angle + index) * (radius*0.4);
+          const sy = windowY - 30*robotStrokeScale + Math.sin(spark.angle + index) * (radius*0.4);
           ctx.save();
-          const sparkleLift = robotSpeaking ? Math.sin(floatPhase*0.03 + index)*6 : 0;
+          const sparkleLift = robotSpeaking ? Math.sin(floatPhase*0.03 + index)*(6*robotStrokeScale) : 0;
           ctx.translate(sx, sy - sparkleLift);
-          const size = spark.size + (robotSpeaking ? 3 : 0);
+          const size = (spark.baseSize + (robotSpeaking ? 3 : 0)) * stageScale;
           ctx.fillStyle = spark.color;
           ctx.beginPath();
           ctx.moveTo(0, 0);
