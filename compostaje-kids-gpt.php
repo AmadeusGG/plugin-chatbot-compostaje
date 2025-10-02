@@ -600,7 +600,8 @@ add_shortcode('compostaje_gpt', function() {
         const w = stageSize.width;
         const h = stageSize.height;
         const baseMeasure = Math.max(1, Math.min(w, h));
-        stageScale = Math.min(1.8, Math.max(0.9, baseMeasure / 320));
+        const rawStageScale = Math.min(1.8, Math.max(0.9, baseMeasure / 320));
+        stageScale = rawStageScale * 0.7; // reduce overall robot and scene size by ~30%
         ctx.clearRect(0,0,w,h);
 
         compostSpawnTimer -= 1;
