@@ -320,6 +320,9 @@ add_shortcode('compostaje_gpt', function() {
   let tossHighlight = 0;
   let wormPhase = 0;
   let stageScale = 1;
+  const worldShrink = 0.7;
+  const shrinkAnchorX = 0.5;
+  const shrinkAnchorY = 1;
 
   const createCompostItem = (opts={}) => {
     const data = compostTypes[Math.floor(Math.random()*compostTypes.length)];
@@ -601,7 +604,7 @@ add_shortcode('compostaje_gpt', function() {
         const h = stageSize.height;
         const baseMeasure = Math.max(1, Math.min(w, h));
         const rawStageScale = Math.min(1.8, Math.max(0.9, baseMeasure / 320));
-        stageScale = rawStageScale * 0.7; // reduce overall robot and scene size by ~30%
+        stageScale = rawStageScale;
         ctx.clearRect(0,0,w,h);
 
         compostSpawnTimer -= 1;
@@ -617,6 +620,11 @@ add_shortcode('compostaje_gpt', function() {
           f.y = Math.max(0.05, Math.min(0.6, f.y));
         });
         wormPhase += 0.02 + (robotSpeaking ? 0.02 : 0);
+
+        ctx.save();
+        ctx.translate(w * shrinkAnchorX, h * shrinkAnchorY);
+        ctx.scale(worldShrink, worldShrink);
+        ctx.translate(-w * shrinkAnchorX, -h * shrinkAnchorY);
 
         // background sun
         const sunX = w*0.12;
@@ -1110,6 +1118,8 @@ add_shortcode('compostaje_gpt', function() {
           ctx.restore();
         });
 
+        ctx.restore();
+
         requestAnimationFrame(loop);
       }
 
@@ -1122,8 +1132,12 @@ add_shortcode('compostaje_gpt', function() {
         if (!ctx) return;
         ev.preventDefault();
         const rect = stageEl.getBoundingClientRect();
-        const normX = (ev.clientX - rect.left) / rect.width;
-        const normY = (ev.clientY - rect.top) / rect.height;
+        let normX = (ev.clientX - rect.left) / rect.width;
+        let normY = (ev.clientY - rect.top) / rect.height;
+        normX = shrinkAnchorX + (normX - shrinkAnchorX) / worldShrink;
+        normY = shrinkAnchorY + (normY - shrinkAnchorY) / worldShrink;
+        normX = Math.max(0, Math.min(1, normX));
+        normY = Math.max(0, Math.min(1, normY));
         tossHighlight = 1;
         const total = 2 + Math.floor(Math.random()*2);
         for (let i=0; i<total; i++){
