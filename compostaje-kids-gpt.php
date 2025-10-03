@@ -348,6 +348,14 @@ add_shortcode('compostaje_gpt', function() {
   let blinkValue = 0;
   let mouthValue = 0.2;
   let floatPhase = 0;
+  let idlePupilTarget = 0;
+  let idlePupilOffset = 0;
+  let idlePupilTimer = 0;
+  let idleWaveActive = false;
+  let idleWavePhase = 0;
+  let idleWaveAmplitude = 0;
+  const getNow = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
+  let nextIdleWaveTime = getNow() + 20000 + Math.random()*10000;
 
   function updateStageState(){
     if (!stageEl) return;
@@ -573,6 +581,44 @@ add_shortcode('compostaje_gpt', function() {
           requestAnimationFrame(loop);
           return;
         }
+        const nowMs = getNow();
+        if (!robotSpeaking) {
+          idlePupilTimer -= 1;
+          if (idlePupilTimer <= 0){
+            idlePupilTarget = (Math.random()*1.6) - 0.8;
+            idlePupilTimer = 80 + Math.random()*120;
+          }
+        } else {
+          idlePupilTarget = 0;
+          idlePupilTimer = 40;
+        }
+        idlePupilOffset += (idlePupilTarget - idlePupilOffset) * 0.06;
+
+        if (!robotSpeaking && !sending){
+          if (!idleWaveActive && nowMs >= nextIdleWaveTime){
+            idleWaveActive = true;
+            idleWavePhase = 0;
+            idleWaveAmplitude = 1;
+            nextIdleWaveTime = nowMs + 20000 + Math.random()*10000;
+            if (typeof speakText === 'function'){
+              speakText('¡Hola!');
+            }
+          }
+        }
+
+        if (idleWaveActive){
+          idleWavePhase += 0.14;
+          idleWaveAmplitude *= 0.988;
+          if (idleWavePhase > Math.PI * 4){
+            idleWaveActive = false;
+            idleWaveAmplitude = 0;
+          }
+        } else if (robotSpeaking) {
+          idleWaveAmplitude = 0;
+        } else {
+          idleWaveAmplitude *= 0.96;
+        }
+
         if (robotSpeaking){
           floatPhase += 1;
           blinkTimer--;
@@ -935,9 +981,10 @@ add_shortcode('compostaje_gpt', function() {
 
         ctx.fillStyle = '#1f3b4d';
         const pupilBob = robotSpeaking ? Math.sin(floatPhase*0.05)*scaled(3) : 0;
+        const pupilXOffset = robotSpeaking ? 0 : scaled(8) * idlePupilOffset;
         ctx.beginPath();
-        ctx.ellipse(centerX - eyeOffset, eyeY + pupilBob, scaled(10), Math.max(scaled(4), eyeH*0.4), 0, 0, Math.PI*2);
-        ctx.ellipse(centerX + eyeOffset, eyeY + pupilBob, scaled(10), Math.max(scaled(4), eyeH*0.4), 0, 0, Math.PI*2);
+        ctx.ellipse(centerX - eyeOffset + pupilXOffset, eyeY + pupilBob, scaled(10), Math.max(scaled(4), eyeH*0.4), 0, 0, Math.PI*2);
+        ctx.ellipse(centerX + eyeOffset + pupilXOffset, eyeY + pupilBob, scaled(10), Math.max(scaled(4), eyeH*0.4), 0, 0, Math.PI*2);
         ctx.fill();
 
         // mouth
@@ -952,23 +999,26 @@ add_shortcode('compostaje_gpt', function() {
 
         // arms
         const armY = faceY + faceH*0.78;
-        const wave = robotSpeaking ? Math.sin(floatPhase*0.08) * scaled(22) : 0;
+        const speakingWave = robotSpeaking ? Math.sin(floatPhase*0.08) * scaled(22) : 0;
+        const idleWaveMotion = idleWaveAmplitude ? Math.sin(idleWavePhase) * scaled(26) * idleWaveAmplitude : 0;
+        const leftArmWave = speakingWave;
+        const rightArmWave = speakingWave + idleWaveMotion;
         ctx.strokeStyle = '#38a3a5';
         ctx.lineCap = 'round';
         ctx.lineWidth = scaledLine(12);
         ctx.beginPath();
         ctx.moveTo(bodyX + scaled(12), armY);
-        ctx.quadraticCurveTo(bodyX - bodyW*0.25, armY - wave - scaled(10), bodyX - bodyW*0.18, armY + wave);
+        ctx.quadraticCurveTo(bodyX - bodyW*0.25, armY - leftArmWave - scaled(10), bodyX - bodyW*0.18, armY + leftArmWave);
         ctx.stroke();
         ctx.beginPath();
         ctx.moveTo(bodyX + bodyW - scaled(12), armY);
-        ctx.quadraticCurveTo(bodyX + bodyW + bodyW*0.25, armY - wave - scaled(10), bodyX + bodyW + bodyW*0.18, armY + wave);
+        ctx.quadraticCurveTo(bodyX + bodyW + bodyW*0.25, armY - rightArmWave - scaled(10), bodyX + bodyW + bodyW*0.18, armY + rightArmWave);
         ctx.stroke();
 
         ctx.fillStyle = '#ff6b6b';
         ctx.beginPath();
-        ctx.ellipse(bodyX - bodyW*0.2, armY + wave, scaled(14), scaled(14), 0, 0, Math.PI*2);
-        ctx.ellipse(bodyX + bodyW + bodyW*0.2, armY + wave, scaled(14), scaled(14), 0, 0, Math.PI*2);
+        ctx.ellipse(bodyX - bodyW*0.2, armY + leftArmWave, scaled(14), scaled(14), 0, 0, Math.PI*2);
+        ctx.ellipse(bodyX + bodyW + bodyW*0.2, armY + rightArmWave, scaled(14), scaled(14), 0, 0, Math.PI*2);
         ctx.fill();
 
         // compost window
