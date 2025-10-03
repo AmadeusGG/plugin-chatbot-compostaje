@@ -266,6 +266,7 @@ add_shortcode('compostaje_gpt', function() {
       <div class="chips" id="chips">
         <button class="chip" id="storyChip" type="button">Cuéntame el cuento mágico del compost</button>
         <button class="chip" id="voiceChip" type="button">Pregúntame sobre el compost</button>
+        <button class="chip" id="stopChip" type="button">Parar</button>
       </div>
       <div class="msgs" id="msgs">
         <div class="bot-stage" id="botStage">
@@ -303,6 +304,7 @@ add_shortcode('compostaje_gpt', function() {
   const chips   = root.getElementById('chips');
   const storyChip = root.getElementById('storyChip');
   const voiceChip = root.getElementById('voiceChip');
+  const stopChip = root.getElementById('stopChip');
   let sending = false;
   let recognition = null;
   let selectedVoice = null;
@@ -310,6 +312,14 @@ add_shortcode('compostaje_gpt', function() {
   let fallbackSpeechTimeout = null;
   let robotThinking = false;
   let thinkingTimeout = null;
+  let canUseRecognition = false;
+
+  function updateChipStates(){
+    const baseDisabled = !!sending;
+    if (storyChip) storyChip.disabled = baseDisabled || robotSpeaking;
+    if (voiceChip) voiceChip.disabled = baseDisabled || robotSpeaking || !canUseRecognition;
+    if (stopChip) stopChip.disabled = baseDisabled || !robotSpeaking;
+  }
 
   const ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
   const stageSize = { width: 0, height: 0 };
@@ -407,17 +417,31 @@ add_shortcode('compostaje_gpt', function() {
     robotSpeaking = true;
     setThinking(false);
     updateStageState();
+    updateChipStates();
   }
 
   function robotStopSpeaking(){
     clearTimeout(fallbackSpeechTimeout);
+    fallbackSpeechTimeout = null;
     robotSpeaking = false;
     updateStageState();
+    updateChipStates();
   }
 
   function robotSimulateSpeech(duration){
     robotStartSpeaking();
     fallbackSpeechTimeout = setTimeout(()=>{ robotStopSpeaking(); }, duration);
+  }
+
+  function cancelSpeechPlayback(){
+    if ('speechSynthesis' in window){
+      try {
+        window.speechSynthesis.cancel();
+      } catch(e){
+        /* noop */
+      }
+    }
+    robotStopSpeaking();
   }
 
   if (ctx){
@@ -1331,19 +1355,21 @@ add_shortcode('compostaje_gpt', function() {
     if (sendBtn) sendBtn.disabled = state;
     if (fieldEl) fieldEl.disabled = state;
     if (micBtn) micBtn.disabled = state ? true : !recognition;
-    Array.from(chips.children).forEach(b=>b.disabled = state);
-    if (!state && voiceChip && !recognition) {
-      voiceChip.disabled = true;
-    }
+    updateChipStates();
   }
 
   function speakText(text){
     const normalized = normalizeReadableText(text);
     const preview = normalized.replace(/\s+/g, ' ').trim();
 
+    if (!preview){
+      cancelSpeechPlayback();
+      return;
+    }
+
+    cancelSpeechPlayback();
+
     if ('speechSynthesis' in window){
-      robotStopSpeaking();
-      window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(normalized);
       utterance.lang = 'es-ES';
       utterance.pitch = 1.1;
@@ -1355,15 +1381,13 @@ add_shortcode('compostaje_gpt', function() {
       utterance.onpause = () => { robotStopSpeaking(); };
       utterance.onresume = () => { robotStartSpeaking(); };
       try {
+        robotStartSpeaking();
         window.speechSynthesis.speak(utterance);
       } catch(e){
-        if (preview){
-          robotStopSpeaking();
-          robotSimulateSpeech(Math.min(7000, Math.max(1800, preview.length * 55)));
-        }
+        robotStopSpeaking();
+        robotSimulateSpeech(Math.min(7000, Math.max(1800, preview.length * 55)));
       }
-    } else if (preview){
-      robotStopSpeaking();
+    } else {
       robotSimulateSpeech(Math.min(7000, Math.max(1800, preview.length * 55)));
     }
   }
@@ -1423,10 +1447,12 @@ add_shortcode('compostaje_gpt', function() {
       if (micBtn) micBtn.classList.remove('active');
       if (voiceChip) voiceChip.classList.remove('active');
     };
-    if (voiceChip) voiceChip.disabled = false;
+    canUseRecognition = true;
+    updateChipStates();
   } else {
     if (micBtn) micBtn.disabled = true;
-    if (voiceChip) voiceChip.disabled = true;
+    canUseRecognition = false;
+    updateChipStates();
   }
 
   if (sendBtn) {
@@ -1437,6 +1463,11 @@ add_shortcode('compostaje_gpt', function() {
   }
   if (voiceChip) {
     voiceChip.addEventListener('click', ()=>{ if(recognition) recognition.start(); });
+  }
+  if (stopChip) {
+    stopChip.addEventListener('click', ()=>{
+      cancelSpeechPlayback();
+    });
   }
   if (storyChip) {
     storyChip.addEventListener('click', ()=>{
@@ -1450,6 +1481,7 @@ add_shortcode('compostaje_gpt', function() {
   }
 
   // Ajuste de altura ya manejado con flexbox
+  updateChipStates();
 })();
 </script>
 <?php
