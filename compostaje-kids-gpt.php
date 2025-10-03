@@ -317,10 +317,6 @@ add_shortcode('compostaje_gpt', function() {
     root.innerHTML = `<style>${css}${prefersDark ? darkCSS : ''}</style>${html}`;
   }
 
-  if (typeof window.gtag === 'function') {
-    window.gtag('event', 'ck_chat_loaded', { event_category: 'chatbot' });
-  }
-
   // JS logic isolated
   const stageEl = root.getElementById('botStage');
   const canvas = root.getElementById('botCanvas');
@@ -341,6 +337,19 @@ add_shortcode('compostaje_gpt', function() {
   let thinkingTimeout = null;
   let robotListening = false;
   let canUseRecognition = false;
+  let recognitionTrigger = null;
+
+  const trackEvent = (eventName, params = {}) => {
+    const payload = { event_category: 'chatbot', ...params };
+    if (typeof window.gtag === 'function') {
+      window.gtag('event', eventName, payload);
+    } else {
+      const layer = window.dataLayer || (window.dataLayer = []);
+      layer.push({ event: eventName, ...payload });
+    }
+  };
+
+  trackEvent('ck_chat_loaded');
 
   function updateChipStates(){
     const baseDisabled = !!sending;
@@ -466,6 +475,9 @@ add_shortcode('compostaje_gpt', function() {
 
   function robotStartSpeaking(){
     clearTimeout(fallbackSpeechTimeout);
+    if (!robotSpeaking) {
+      trackEvent('ck_voice_speak_start');
+    }
     robotSpeaking = true;
     setThinking(false);
     updateStageState();
@@ -475,6 +487,9 @@ add_shortcode('compostaje_gpt', function() {
   function robotStopSpeaking(){
     clearTimeout(fallbackSpeechTimeout);
     fallbackSpeechTimeout = null;
+    if (robotSpeaking) {
+      trackEvent('ck_voice_speak_end');
+    }
     robotSpeaking = false;
     updateStageState();
     updateChipStates();
@@ -1299,9 +1314,7 @@ add_shortcode('compostaje_gpt', function() {
         if (compostItems.length > 16){
           compostItems.splice(0, compostItems.length - 16);
         }
-        if (typeof window.gtag === 'function'){
-          window.gtag('event', 'ck_compost_throw', { event_category: 'chatbot' });
-        }
+        trackEvent('ck_compost_throw', { event_label: 'canvas' });
       });
     }
 
@@ -1444,16 +1457,18 @@ add_shortcode('compostaje_gpt', function() {
     }
   }
 
-  async function send(txt){
-    if(!txt || sending) return;
-    disableIdleGreeting();
-    setSending(true);
-    if (typeof window.gtag === 'function') {
-      window.gtag('event', 'ck_chat_message', { event_category: 'chatbot' });
-    }
-    addHistory('user', txt);
-    if (fieldEl) fieldEl.value='';
-    robotStopSpeaking();
+    async function send(txt, origin = 'unknown'){
+      if(!txt || sending) return;
+      disableIdleGreeting();
+      setSending(true);
+      const sanitizedOrigin = origin || 'unknown';
+      trackEvent('ck_chat_message', {
+        event_label: sanitizedOrigin,
+        value: Math.min(txt.length, 1000)
+      });
+      addHistory('user', txt);
+      if (fieldEl) fieldEl.value='';
+      robotStopSpeaking();
     try{
       const res = await fetch(ajaxUrl, {
         method:'POST',
@@ -1466,37 +1481,54 @@ add_shortcode('compostaje_gpt', function() {
       const safeReply = normalizeReadableText(reply);
       addHistory('assistant', safeReply);
       speakText(safeReply);
-      if (typeof window.gtag === 'function') {
-        window.gtag('event', 'ck_chat_reply', { event_category: 'chatbot' });
+        trackEvent('ck_chat_reply', {
+          event_label: 'assistant_reply',
+          value: Math.min(safeReply.length, 1000)
+        });
+      }catch(err){
+        const msg = 'Ups, parece que las lombrices están dormidas. ¡Inténtalo otra vez!';
+        const safeMsg = normalizeReadableText(msg);
+        addHistory('assistant', safeMsg);
+        speakText(safeMsg);
+        console.error(err);
+        const errLabel = err && err.message ? String(err.message) : (typeof err === 'string' ? err : 'unknown');
+        trackEvent('ck_chat_error', {
+          event_label: errLabel ? errLabel.slice(0, 100) : 'unknown',
+          error_type: err && err.name ? err.name : 'unknown'
+        });
+      }finally{
+        setSending(false);
       }
-    }catch(err){
-      const msg = 'Ups, parece que las lombrices están dormidas. ¡Inténtalo otra vez!';
-      const safeMsg = normalizeReadableText(msg);
-      addHistory('assistant', safeMsg);
-      speakText(safeMsg);
-      console.error(err);
-      if (typeof window.gtag === 'function') {
-        window.gtag('event', 'ck_chat_error', { event_category: 'chatbot' });
-      }
-    }finally{
-      setSending(false);
     }
-  }
 
   if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SR();
     recognition.lang = 'es-ES';
     recognition.interimResults = false;
-    recognition.onresult = (e) => {
-      const transcript = e.results[0][0].transcript.trim();
-      if (transcript) send(transcript);
-    };
-    recognition.onstart = () => {
-      robotStartListening();
-      if (micBtn) micBtn.classList.add('active');
-      if (voiceChip) voiceChip.classList.add('active');
-    };
+      recognition.onresult = (e) => {
+        const transcript = e.results[0][0].transcript.trim();
+        if (transcript) {
+          trackEvent('ck_voice_recognition_result', {
+            event_label: recognitionTrigger || 'unknown',
+            value: Math.min(transcript.length, 1000)
+          });
+          const voiceOrigin = recognitionTrigger ? `voice_${recognitionTrigger}` : 'voice';
+          send(transcript, voiceOrigin);
+        } else {
+          trackEvent('ck_voice_recognition_result_empty', {
+            event_label: recognitionTrigger || 'unknown'
+          });
+        }
+      };
+      recognition.onstart = () => {
+        robotStartListening();
+        if (micBtn) micBtn.classList.add('active');
+        if (voiceChip) voiceChip.classList.add('active');
+        trackEvent('ck_voice_recognition_start', {
+          event_label: recognitionTrigger || 'unknown'
+        });
+      };
     recognition.onspeechstart = () => {
       robotStartListening();
     };
@@ -1509,48 +1541,105 @@ add_shortcode('compostaje_gpt', function() {
     recognition.onaudioend = () => {
       robotStopListening();
     };
-    recognition.onerror = () => {
-      robotStopListening();
-    };
-    recognition.onend = () => {
-      robotStopListening();
-      if (micBtn) micBtn.classList.remove('active');
-      if (voiceChip) voiceChip.classList.remove('active');
-    };
-    canUseRecognition = true;
-    updateChipStates();
-  } else {
-    if (micBtn) micBtn.disabled = true;
-    canUseRecognition = false;
-    updateChipStates();
-  }
+      recognition.onerror = (e) => {
+        robotStopListening();
+        trackEvent('ck_voice_recognition_error', {
+          event_label: recognitionTrigger || 'unknown',
+          error_type: e && e.error ? e.error : 'unknown'
+        });
+      };
+      recognition.onend = () => {
+        robotStopListening();
+        if (micBtn) micBtn.classList.remove('active');
+        if (voiceChip) voiceChip.classList.remove('active');
+        trackEvent('ck_voice_recognition_end', {
+          event_label: recognitionTrigger || 'unknown'
+        });
+        recognitionTrigger = null;
+      };
+      canUseRecognition = true;
+      const recognitionType = typeof window.SpeechRecognition !== 'undefined' ? 'standard' : 'webkit';
+      trackEvent('ck_voice_recognition_supported', { event_label: recognitionType });
+      updateChipStates();
+    } else {
+      if (micBtn) micBtn.disabled = true;
+      canUseRecognition = false;
+      trackEvent('ck_voice_recognition_unsupported', { event_label: 'none' });
+      updateChipStates();
+    }
 
-  if (sendBtn) {
-    sendBtn.addEventListener('click', ()=>{ disableIdleGreeting(); send(fieldEl ? fieldEl.value.trim() : ''); });
-  }
-  if (micBtn) {
-    micBtn.addEventListener('click', ()=>{ disableIdleGreeting(); if(recognition) recognition.start(); });
-  }
-  if (voiceChip) {
-    voiceChip.addEventListener('click', ()=>{ disableIdleGreeting(); if(recognition) recognition.start(); });
-  }
-  if (stopChip) {
-    stopChip.addEventListener('click', ()=>{
-      disableIdleGreeting();
-      cancelSpeechPlayback();
-    });
-  }
-  if (storyChip) {
-    storyChip.addEventListener('click', ()=>{
-      disableIdleGreeting();
-      if (sending) return;
-      addHistory('assistant', storyText);
-      speakText(storyText);
-    });
-  }
-  if (fieldEl) {
-    fieldEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send(fieldEl.value.trim()); } });
-  }
+    if (sendBtn) {
+      sendBtn.addEventListener('click', ()=>{
+        disableIdleGreeting();
+        trackEvent('ck_send_click', { event_label: 'button' });
+        send(fieldEl ? fieldEl.value.trim() : '', 'button');
+      });
+    }
+    if (micBtn) {
+      micBtn.addEventListener('click', ()=>{
+        disableIdleGreeting();
+        if (recognition) {
+          recognitionTrigger = 'mic_button';
+          trackEvent('ck_voice_trigger', { event_label: recognitionTrigger });
+          try {
+            recognition.start();
+          } catch (err) {
+            recognitionTrigger = null;
+            trackEvent('ck_voice_trigger_failed', {
+              event_label: 'mic_button',
+              error_type: err && err.name ? err.name : 'unknown'
+            });
+          }
+        } else {
+          trackEvent('ck_voice_trigger_failed', { event_label: 'mic_button' });
+        }
+      });
+    }
+    if (voiceChip) {
+      voiceChip.addEventListener('click', ()=>{
+        disableIdleGreeting();
+        if (recognition) {
+          recognitionTrigger = 'voice_chip';
+          trackEvent('ck_voice_trigger', { event_label: recognitionTrigger });
+          try {
+            recognition.start();
+          } catch (err) {
+            recognitionTrigger = null;
+            trackEvent('ck_voice_trigger_failed', {
+              event_label: 'voice_chip',
+              error_type: err && err.name ? err.name : 'unknown'
+            });
+          }
+        } else {
+          trackEvent('ck_voice_trigger_failed', { event_label: 'voice_chip' });
+        }
+      });
+    }
+    if (stopChip) {
+      stopChip.addEventListener('click', ()=>{
+        disableIdleGreeting();
+        trackEvent('ck_voice_stop', { event_label: 'chip' });
+        cancelSpeechPlayback();
+      });
+    }
+    if (storyChip) {
+      storyChip.addEventListener('click', ()=>{
+        disableIdleGreeting();
+        if (sending) return;
+        trackEvent('ck_story_play', { event_label: 'chip' });
+        addHistory('assistant', storyText);
+        speakText(storyText);
+      });
+    }
+    if (fieldEl) {
+      fieldEl.addEventListener('keydown', (e)=>{
+        if(e.key==='Enter' && !e.shiftKey){
+          e.preventDefault();
+          trackEvent('ck_send_click', { event_label: 'keyboard' });
+          send(fieldEl.value.trim(), 'keyboard');
+        }
+      });
+    }
 
   // Ajuste de altura ya manejado con flexbox
   updateChipStates();
