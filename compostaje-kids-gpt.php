@@ -418,8 +418,17 @@ add_shortcode('compostaje_gpt', function() {
   let idleWaveActive = false;
   let idleWavePhase = 0;
   let idleWaveAmplitude = 0;
+  let idleGreetingEnabled = true;
   const getNow = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
   let nextIdleWaveTime = getNow() + 20000 + Math.random()*10000;
+
+  const disableIdleGreeting = () => {
+    if (!idleGreetingEnabled) return;
+    idleGreetingEnabled = false;
+    idleWaveActive = false;
+    idleWaveAmplitude = 0;
+    nextIdleWaveTime = Infinity;
+  };
 
   function updateStageState(){
     if (!stageEl) return;
@@ -702,7 +711,7 @@ add_shortcode('compostaje_gpt', function() {
         }
         idlePupilOffset += (idlePupilTarget - idlePupilOffset) * 0.06;
 
-        if (!robotSpeaking && !sending){
+        if (idleGreetingEnabled && !robotSpeaking && !sending){
           if (!idleWaveActive && nowMs >= nextIdleWaveTime){
             idleWaveActive = true;
             idleWavePhase = 0;
@@ -1437,6 +1446,7 @@ add_shortcode('compostaje_gpt', function() {
 
   async function send(txt){
     if(!txt || sending) return;
+    disableIdleGreeting();
     setSending(true);
     if (typeof window.gtag === 'function') {
       window.gtag('event', 'ck_chat_message', { event_category: 'chatbot' });
@@ -1516,21 +1526,23 @@ add_shortcode('compostaje_gpt', function() {
   }
 
   if (sendBtn) {
-    sendBtn.addEventListener('click', ()=> send(fieldEl ? fieldEl.value.trim() : ''));
+    sendBtn.addEventListener('click', ()=>{ disableIdleGreeting(); send(fieldEl ? fieldEl.value.trim() : ''); });
   }
   if (micBtn) {
-    micBtn.addEventListener('click', ()=>{ if(recognition) recognition.start(); });
+    micBtn.addEventListener('click', ()=>{ disableIdleGreeting(); if(recognition) recognition.start(); });
   }
   if (voiceChip) {
-    voiceChip.addEventListener('click', ()=>{ if(recognition) recognition.start(); });
+    voiceChip.addEventListener('click', ()=>{ disableIdleGreeting(); if(recognition) recognition.start(); });
   }
   if (stopChip) {
     stopChip.addEventListener('click', ()=>{
+      disableIdleGreeting();
       cancelSpeechPlayback();
     });
   }
   if (storyChip) {
     storyChip.addEventListener('click', ()=>{
+      disableIdleGreeting();
       if (sending) return;
       addHistory('assistant', storyText);
       speakText(storyText);
