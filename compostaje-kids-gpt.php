@@ -196,6 +196,17 @@ add_shortcode('compostaje_gpt', function() {
   .bot-stage{ position:relative; flex:1; min-height:0; border-bottom:1px solid #f3d1dc; background:linear-gradient(180deg,#ffeef6 0%,#fff9d7 100%); display:flex; align-items:center; justify-content:center; padding:12px 18px 20px; }
   .bot-stage::before{ content:''; position:absolute; inset:14px 18px 60px; background:rgba(255,255,255,0.7); border-radius:26px; box-shadow:0 12px 24px rgba(255,107,107,0.25); z-index:0; transition:transform .6s ease, box-shadow .6s ease; }
   .bot-stage.is-speaking::before{ transform:scale(1.02); box-shadow:0 18px 34px rgba(255,107,107,0.45); }
+  .thinking-bubble{ position:absolute; top:18%; right:10%; max-width:280px; display:flex; justify-content:center; pointer-events:none; opacity:0; transform:translateY(12px) scale(0.94); transition:opacity .3s ease, transform .3s ease; z-index:2; }
+  .thinking-bubble .bubble-body{ background:rgba(255,255,255,0.95); border:3px solid var(--bd); border-radius:28px; padding:14px 18px; box-shadow:0 12px 30px rgba(15,23,42,0.12); position:relative; display:flex; align-items:center; gap:12px; animation:bubbleFloat 3s ease-in-out infinite; }
+  .thinking-bubble .bubble-body::after{ content:''; position:absolute; bottom:-18px; left:44px; width:26px; height:26px; background:rgba(255,255,255,0.95); border:3px solid var(--bd); border-top-color:transparent; border-left-color:transparent; transform:rotate(45deg); border-radius:6px; box-shadow:0 12px 30px rgba(15,23,42,0.12); }
+  .thinking-bubble .thinking-text{ font-size:clamp(18px,2.6vw,22px); font-weight:700; color:#0f172a; }
+  .thinking-dots{ display:inline-flex; gap:6px; }
+  .thinking-dots span{ width:10px; height:10px; background:var(--pri); border-radius:50%; opacity:0.7; animation:dotPulse 1.2s ease-in-out infinite; }
+  .thinking-dots span:nth-child(2){ animation-delay:.15s; }
+  .thinking-dots span:nth-child(3){ animation-delay:.3s; }
+  .bot-stage.is-thinking .thinking-bubble{ opacity:1; transform:translateY(0) scale(1); }
+  @keyframes bubbleFloat{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-6px); } }
+  @keyframes dotPulse{ 0%,100%{ transform:scale(0.7); opacity:0.4; } 50%{ transform:scale(1); opacity:1; } }
   canvas.bot-canvas{ position:relative; z-index:1; width:100%; height:100%; display:block; }
   .input{ display:flex; gap:12px; padding:16px 20px; border-top:1px solid var(--bd); background:#ffffff; position:sticky; bottom:0; left:0; right:0; }
   .field{ flex:1; padding:16px 20px; border:1px solid #d1d5db; border-radius:16px; font-size:20px; outline:none; background:#fff; color:#0f172a; }
@@ -215,6 +226,9 @@ add_shortcode('compostaje_gpt', function() {
   @media (max-width:560px){
     .chips{ justify-content:flex-start; padding:10px 8px; }
     .bot-stage{ height:230px; padding:8px 12px 16px; }
+    .thinking-bubble{ top:auto; bottom:24%; right:auto; left:50%; transform:translate(-50%,18px) scale(0.9); }
+    .bot-stage.is-thinking .thinking-bubble{ transform:translate(-50%,0) scale(1); }
+    .thinking-bubble .bubble-body::after{ left:50%; transform:translateX(-50%) rotate(45deg); }
   }
   .input{ padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
   `;
@@ -233,6 +247,10 @@ add_shortcode('compostaje_gpt', function() {
   .field::placeholder{ color:#8b93a1; }
   .input{ background:#0b0f14; }
   .send{ background:var(--pri); color:#fff; }
+  .thinking-bubble .bubble-body{ background:rgba(14,19,26,0.9); border-color:#334155; box-shadow:0 12px 30px rgba(8,12,20,0.55); }
+  .thinking-bubble .bubble-body::after{ background:rgba(14,19,26,0.9); border-color:#334155; box-shadow:0 12px 30px rgba(8,12,20,0.55); }
+  .thinking-bubble .thinking-text{ color:#f3f4f6; }
+  .thinking-dots span{ background:#fbbf24; }
   `;
 
   // Build base HTML
@@ -252,6 +270,12 @@ add_shortcode('compostaje_gpt', function() {
       <div class="msgs" id="msgs">
         <div class="bot-stage" id="botStage">
           <canvas class="bot-canvas" id="botCanvas"></canvas>
+          <div class="thinking-bubble" aria-hidden="true">
+            <div class="bubble-body">
+              <span class="thinking-text">Estoy pensando tu respuesta...</span>
+              <span class="thinking-dots"><span></span><span></span><span></span></span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -284,6 +308,8 @@ add_shortcode('compostaje_gpt', function() {
   let selectedVoice = null;
   let robotSpeaking = false;
   let fallbackSpeechTimeout = null;
+  let robotThinking = false;
+  let thinkingTimeout = null;
 
   const ctx = canvas && canvas.getContext ? canvas.getContext('2d') : null;
   const stageSize = { width: 0, height: 0 };
@@ -360,11 +386,26 @@ add_shortcode('compostaje_gpt', function() {
   function updateStageState(){
     if (!stageEl) return;
     stageEl.classList.toggle('is-speaking', robotSpeaking);
+    stageEl.classList.toggle('is-thinking', robotThinking && !robotSpeaking);
+  }
+
+  function setThinking(state){
+    if (thinkingTimeout){
+      clearTimeout(thinkingTimeout);
+      thinkingTimeout = null;
+    }
+    if (robotThinking === state) {
+      updateStageState();
+      return;
+    }
+    robotThinking = state;
+    updateStageState();
   }
 
   function robotStartSpeaking(){
     clearTimeout(fallbackSpeechTimeout);
     robotSpeaking = true;
+    setThinking(false);
     updateStageState();
   }
 
@@ -1275,6 +1316,18 @@ add_shortcode('compostaje_gpt', function() {
 
   function setSending(state){
     sending = state;
+    if (state){
+      setThinking(true);
+    } else if (!robotSpeaking && robotThinking) {
+      if (thinkingTimeout){
+        clearTimeout(thinkingTimeout);
+      }
+      thinkingTimeout = setTimeout(()=>{
+        if (!robotSpeaking) {
+          setThinking(false);
+        }
+      }, 1200);
+    }
     if (sendBtn) sendBtn.disabled = state;
     if (fieldEl) fieldEl.disabled = state;
     if (micBtn) micBtn.disabled = state ? true : !recognition;
