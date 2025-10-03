@@ -273,7 +273,7 @@ add_shortcode('compostaje_gpt', function() {
       <div class="header">
         ${logoUrl ? `<img src="${logoUrl}" alt="Agente IA Compostaje CEBAS Kids">` : ''}
         <div class="text" style="text-align:center;">
-          <div class="title">Agente IA Compostaje CEBAS Kids</div>
+          <div class="title">Compostín - Agente IA Compostaje CEBAS Kids</div>
           <p class="desc">Un rincón mágico del CEBAS-CSIC donde una Inteligencia Artificial te enseña a compostar como en un cuento.</p>
         </div>
       </div>
@@ -718,7 +718,7 @@ add_shortcode('compostaje_gpt', function() {
             idleWaveAmplitude = 1;
             nextIdleWaveTime = nowMs + 20000 + Math.random()*10000;
             if (typeof speakText === 'function'){
-              speakText('¡Hola!');
+              speakText('¡Hola chicos y chicas!');
             }
           }
         }
@@ -1380,7 +1380,7 @@ add_shortcode('compostaje_gpt', function() {
     return output.trim();
   }
 
-  const storyText = normalizeReadableText('Hola, soy Compostín, un agente de inteligencia artificial creado por el cebas cesic y experto en compostaje. Érase una vez, en un huerto alegre y soleado, una caja muy especial llamada la caja mágica del huerto. Los niños la cuidaban con cariño y cada día le daban de comer cáscaras de plátano, manzana, hojas secas y restos de comida natural, pero nunca plástico ni cosas que no fueran de la naturaleza. Con el tiempo, aparecieron lombrices rojas que bailaban felices transformando todo lo que entraba en la caja. Pasaron los meses y un día ya no había restos, sino una tierra oscura, suave y con aroma a bosque: el compost. El maestro les explicó que era un tesoro de la naturaleza. Los niños lo llevaron al huerto y, al ponerlo en la tierra, crecieron flores coloridas y verduras sabrosas. Así aprendieron que los restos naturales se convierten en vida. Y colorín colorado, este cuento compostado se ha acabado. Ahora puedes preguntarme lo que quieras sobre compost.');
+  const storyText = normalizeReadableText('Hola, soy Compostín!, un agente de inteligencia artificial creado por el cebas cesic y todo un guardían del compost!. Érase una vez, en un huerto alegre y soleado, una caja muy especial llamada la caja mágica del huerto. Los niños la cuidaban con cariño y cada día le daban de comer cáscaras de plátano, manzana, hojas secas y restos de comida natural, pero nunca plástico ni cosas que no fueran de la naturaleza. Con el tiempo, aparecieron lombrices rojas que bailaban felices transformando todo lo que entraba en la caja. Pasaron los meses y un día ya no había restos, sino una tierra oscura, suave y con aroma a bosque: el compost. El maestro les explicó que era un tesoro de la naturaleza. Los niños lo llevaron al huerto y, al ponerlo en la tierra, crecieron flores coloridas y verduras sabrosas. Así aprendieron que los restos naturales se convierten en vida. Y colorín colorado, este cuento compostado se ha acabado. Ahora puedes preguntarme lo que quieras sobre compost.');
 
   const history = [];
   const addHistory = (role, content) => {
