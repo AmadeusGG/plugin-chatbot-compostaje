@@ -196,6 +196,7 @@ add_shortcode('compostaje_gpt', function() {
   .bot-stage{ position:relative; flex:1; min-height:0; border-bottom:1px solid #f3d1dc; background:linear-gradient(180deg,#ffeef6 0%,#fff9d7 100%); display:flex; align-items:center; justify-content:center; padding:12px 18px 20px; }
   .bot-stage::before{ content:''; position:absolute; inset:14px 18px 60px; background:rgba(255,255,255,0.7); border-radius:26px; box-shadow:0 12px 24px rgba(255,107,107,0.25); z-index:0; transition:transform .6s ease, box-shadow .6s ease; }
   .bot-stage.is-speaking::before{ transform:scale(1.02); box-shadow:0 18px 34px rgba(255,107,107,0.45); }
+  .bot-stage.is-listening::before{ transform:scale(1.01); box-shadow:0 16px 30px rgba(52,211,153,0.4); }
   .thinking-bubble{ position:absolute; top:18%; right:10%; max-width:280px; display:flex; justify-content:center; pointer-events:none; opacity:0; transform:translateY(12px) scale(0.94); transition:opacity .3s ease, transform .3s ease; z-index:2; }
   .thinking-bubble .bubble-body{ background:rgba(255,255,255,0.95); border:3px solid var(--bd); border-radius:28px; padding:14px 18px; box-shadow:0 12px 30px rgba(15,23,42,0.12); position:relative; display:flex; align-items:center; gap:12px; animation:bubbleFloat 3s ease-in-out infinite; }
   .thinking-bubble .bubble-body::after{ content:''; position:absolute; bottom:-18px; left:44px; width:26px; height:26px; background:rgba(255,255,255,0.95); border:3px solid var(--bd); border-top-color:transparent; border-left-color:transparent; transform:rotate(45deg); border-radius:6px; box-shadow:0 12px 30px rgba(15,23,42,0.12); }
@@ -208,6 +209,15 @@ add_shortcode('compostaje_gpt', function() {
   @keyframes bubbleFloat{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-6px); } }
   @keyframes dotPulse{ 0%,100%{ transform:scale(0.7); opacity:0.4; } 50%{ transform:scale(1); opacity:1; } }
   canvas.bot-canvas{ position:relative; z-index:1; width:100%; height:100%; display:block; }
+  .listening-indicator{ position:absolute; bottom:18%; left:50%; transform:translate(-50%,36px); display:flex; flex-direction:column; align-items:center; gap:10px; padding:16px 20px; background:rgba(255,255,255,0.95); border-radius:24px; border:3px solid var(--bd); box-shadow:0 16px 40px rgba(52,211,153,0.32); opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s ease; z-index:3; }
+  .bot-stage.is-listening .listening-indicator{ opacity:1; transform:translate(-50%,0); }
+  .listening-icon{ position:relative; width:56px; height:56px; display:flex; align-items:center; justify-content:center; }
+  .listening-icon .pulse{ position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle, rgba(52,211,153,0.55) 0%, rgba(52,211,153,0.15) 60%, rgba(52,211,153,0) 100%); animation:micPulse 1.6s ease-out infinite; }
+  .listening-icon .pulse.delay{ animation-delay:.6s; }
+  .listening-icon .mic-symbol{ position:relative; z-index:1; width:38px; height:38px; border-radius:12px; background:#34d399; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(20,83,45,0.35); }
+  .listening-icon svg{ width:24px; height:24px; display:block; fill:#fff; }
+  .listening-text{ font-weight:700; font-size:clamp(18px,2.4vw,22px); color:#047857; text-align:center; }
+  @keyframes micPulse{ 0%{ transform:scale(0.65); opacity:0.85; } 70%{ transform:scale(1); opacity:0; } 100%{ transform:scale(1); opacity:0; } }
   .input{ display:flex; gap:12px; padding:16px 20px; border-top:1px solid var(--bd); background:#ffffff; position:sticky; bottom:0; left:0; right:0; }
   .field{ flex:1; padding:16px 20px; border:1px solid #d1d5db; border-radius:16px; font-size:20px; outline:none; background:#fff; color:#0f172a; }
   .field::placeholder{ color:#9aa3ae; }
@@ -251,6 +261,10 @@ add_shortcode('compostaje_gpt', function() {
   .thinking-bubble .bubble-body::after{ background:rgba(14,19,26,0.9); border-color:#334155; box-shadow:0 12px 30px rgba(8,12,20,0.55); }
   .thinking-bubble .thinking-text{ color:#f3f4f6; }
   .thinking-dots span{ background:#fbbf24; }
+  .listening-indicator{ background:rgba(14,19,26,0.9); border-color:#334155; box-shadow:0 16px 40px rgba(4,120,87,0.32); }
+  .listening-icon .pulse{ background:radial-gradient(circle, rgba(16,185,129,0.6) 0%, rgba(16,185,129,0.15) 60%, rgba(16,185,129,0) 100%); }
+  .listening-icon .mic-symbol{ background:#0f766e; box-shadow:0 4px 14px rgba(6,78,59,0.45); }
+  .listening-text{ color:#34d399; }
   `;
 
   // Build base HTML
@@ -271,6 +285,18 @@ add_shortcode('compostaje_gpt', function() {
       <div class="msgs" id="msgs">
         <div class="bot-stage" id="botStage">
           <canvas class="bot-canvas" id="botCanvas"></canvas>
+          <div class="listening-indicator" id="listeningIndicator" aria-hidden="true">
+            <div class="listening-icon" aria-hidden="true">
+              <span class="pulse"></span>
+              <span class="pulse delay"></span>
+              <span class="mic-symbol">
+                <svg viewBox="0 0 24 24" role="img" aria-label="Micrófono">
+                  <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2Zm-4.25 7.03V22h-1.5v-2.97A7.02 7.02 0 0 1 5 12h2a5 5 0 0 0 10 0h2a7.02 7.02 0 0 1-6.25 7.03Z"/>
+                </svg>
+              </span>
+            </div>
+            <span class="listening-text">Compostín te escucha...</span>
+          </div>
           <div class="thinking-bubble" aria-hidden="true">
             <div class="bubble-body">
               <span class="thinking-text">Estoy pensando tu respuesta...</span>
@@ -302,6 +328,7 @@ add_shortcode('compostaje_gpt', function() {
   const sendBtn = root.getElementById('send');
   const micBtn  = root.getElementById('mic');
   const chips   = root.getElementById('chips');
+  const listeningIndicator = root.getElementById('listeningIndicator');
   const storyChip = root.getElementById('storyChip');
   const voiceChip = root.getElementById('voiceChip');
   const stopChip = root.getElementById('stopChip');
@@ -312,6 +339,7 @@ add_shortcode('compostaje_gpt', function() {
   let fallbackSpeechTimeout = null;
   let robotThinking = false;
   let thinkingTimeout = null;
+  let robotListening = false;
   let canUseRecognition = false;
 
   function updateChipStates(){
@@ -397,6 +425,21 @@ add_shortcode('compostaje_gpt', function() {
     if (!stageEl) return;
     stageEl.classList.toggle('is-speaking', robotSpeaking);
     stageEl.classList.toggle('is-thinking', robotThinking && !robotSpeaking);
+    stageEl.classList.toggle('is-listening', robotListening);
+    if (listeningIndicator) {
+      listeningIndicator.setAttribute('aria-hidden', robotListening ? 'false' : 'true');
+    }
+  }
+
+  function robotStartListening(){
+    robotListening = true;
+    robotThinking = false;
+    updateStageState();
+  }
+
+  function robotStopListening(){
+    robotListening = false;
+    updateStageState();
   }
 
   function setThinking(state){
@@ -1440,10 +1483,27 @@ add_shortcode('compostaje_gpt', function() {
       if (transcript) send(transcript);
     };
     recognition.onstart = () => {
+      robotStartListening();
       if (micBtn) micBtn.classList.add('active');
       if (voiceChip) voiceChip.classList.add('active');
     };
+    recognition.onspeechstart = () => {
+      robotStartListening();
+    };
+    recognition.onaudiostart = () => {
+      robotStartListening();
+    };
+    recognition.onspeechend = () => {
+      robotStopListening();
+    };
+    recognition.onaudioend = () => {
+      robotStopListening();
+    };
+    recognition.onerror = () => {
+      robotStopListening();
+    };
     recognition.onend = () => {
+      robotStopListening();
       if (micBtn) micBtn.classList.remove('active');
       if (voiceChip) voiceChip.classList.remove('active');
     };
@@ -1482,6 +1542,7 @@ add_shortcode('compostaje_gpt', function() {
 
   // Ajuste de altura ya manejado con flexbox
   updateChipStates();
+  updateStageState();
 })();
 </script>
 <?php
